@@ -6,10 +6,10 @@
 
 <resources>
     <!-- For app theme -->
-    <color name="colorPrimary">#008577</color>
-    <color name="colorPrimaryDark">#00574B</color>
+    <color name="colorPrimary">#1E6FF2</color>
+    <color name="colorPrimaryDark">#1948B4</color>
     <color name="colorAccent">#D81B60</color>
-    <color name="colorText">#3f4149</color>
+    <color name="colorText">#232936</color>
     <color name="colorWhite">#FFFFFF</color>
     <color name="colorBlack">#000000</color>
 

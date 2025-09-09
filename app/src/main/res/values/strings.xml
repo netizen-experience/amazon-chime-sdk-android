@@ -6,7 +6,7 @@
 <resources>
     <string name="app_name">AmazonChimeSDKDemo</string>
     <string name="edit_meeting_id">Meeting ID</string>
-    <string name="edit_name">Your Name</string>
+    <string name="edit_name">User ID</string>
     <string name="main_title">Join a meeting</string>
     <string name="audio_mode_spinner">Audio Mode</string>
     <string name="audio_device_capabilities_spinner">Audio Device Capabilities</string>
@@ -29,7 +29,7 @@
     <string name="volume_indicator">Volume Indicator</string>
     <string name="active_speaker_indicator">Active Speaker Indicator</string>
     <string name="screen_share_view">Screen Share</string>
-    <string name="version_prefix">amazon-chime-sdk-android@</string>
+    <string name="version_prefix">Netizen Labs v</string>
 
     <!-- video -->
     <string name="video_view">Video Collection</string>

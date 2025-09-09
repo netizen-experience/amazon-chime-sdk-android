@@ -10,8 +10,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
+    android:keepScreenOn="true"
     android:orientation="vertical"
-    android:keepScreenOn="true">
+    android:paddingLeft="32dp"
+    android:paddingRight="32dp">
 
     <TextView
         android:id="@+id/textView"
@@ -23,62 +25,67 @@
 
     <EditText
         android:id="@+id/editMeetingId"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:hint="@string/edit_meeting_id"
         android:importantForAutofill="no"
         android:inputType="text"
-        android:maxLength="35"
-        android:textAlignment="center" />
+        android:maxLength="100"
+        android:textAlignment="viewStart" />
 
     <EditText
         android:id="@+id/editName"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
         android:hint="@string/edit_name"
         android:importantForAutofill="no"
         android:inputType="text"
-        android:textAlignment="center" />
+        android:textAlignment="viewStart" />
 
     <androidx.appcompat.widget.AppCompatSpinner
         android:id="@+id/audioModeSpinner"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:contentDescription="@string/audio_mode_spinner"
-        android:layout_gravity="center"/>
+        android:visibility="invisible" />
 
     <androidx.appcompat.widget.AppCompatSpinner
         android:id="@+id/audioDeviceCapabilitiesSpinner"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:contentDescription="@string/audio_device_capabilities_spinner"
-        android:layout_gravity="center"/>
+        android:visibility="invisible" />
 
     <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/audioRedundancySwitch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:checked="true"
         android:contentDescription="@string/audio_redundancy_switch"
         android:text="@string/audio_redundancy_switch"
-        android:layout_gravity="center"/>
+        android:visibility="invisible" />
 
     <androidx.appcompat.widget.AppCompatSpinner
-            android:id="@+id/reconnectTimeoutSpinner"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:contentDescription="@string/reconnect_timeout_spinner"
-            android:layout_gravity="center"/>
+        android:id="@+id/reconnectTimeoutSpinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:contentDescription="@string/reconnect_timeout_spinner"
+        android:visibility="invisible" />
 
     <Button
         android:id="@+id/buttonContinue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/join_meeting"
+        android:layout_gravity="center"
         android:contentDescription="@string/main_continue"
         android:gravity="center"
-        android:layout_gravity="center"/>
+        android:text="@string/join_meeting" />
 
     <ProgressBar
         android:id="@+id/progressAuthentication"
@@ -105,7 +112,8 @@
         android:backgroundTint="@color/design_default_color_surface"
         android:text="@string/main_debug_settings"
         android:textColor="@color/colorText"
-        android:textSize="12sp" />
+        android:textSize="12sp"
+        android:visibility="gone" />
 
 
 </LinearLayout>
