@@ -29,8 +29,7 @@
     <string name="volume_indicator">Volume Indicator</string>
     <string name="active_speaker_indicator">Active Speaker Indicator</string>
     <string name="screen_share_view">Screen Share</string>
-    <string name="version_prefix">Netizen Labs v</string>
-    <string name="version">0.3.12</string>
+    <string name="version">Netizen Labs v0.3.12</string>
 
     <!-- video -->
     <string name="video_view">Video Collection</string>

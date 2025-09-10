@@ -102,7 +102,7 @@ class HomeActivity : AppCompatActivity() {
         findViewById<Button>(R.id.buttonDebugSettings)?.setOnClickListener { showDebugSettings() }
 
         val versionText: TextView = findViewById(R.id.versionText)
-        versionText.text = "${getString(R.string.version_prefix)}${getString(R.string.version)}"
+        versionText.text = getString(R.string.version)
     }
 
     private fun showDebugSettings() {
