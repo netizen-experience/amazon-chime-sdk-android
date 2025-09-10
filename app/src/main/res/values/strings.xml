@@ -4,7 +4,7 @@
   -->
 
 <resources>
-    <string name="app_name">AmazonChimeSDKDemo</string>
+    <string name="app_name">Netizen Labs</string>
     <string name="edit_meeting_id">Meeting ID</string>
     <string name="edit_name">User ID</string>
     <string name="main_title">Join a meeting</string>
@@ -30,6 +30,7 @@
     <string name="active_speaker_indicator">Active Speaker Indicator</string>
     <string name="screen_share_view">Screen Share</string>
     <string name="version_prefix">Netizen Labs v</string>
+    <string name="version">0.3.12</string>
 
     <!-- video -->
     <string name="video_view">Video Collection</string>
@@ -113,7 +114,7 @@
 
     <!-- Service -->
     <string name="microphone_notification_tile">Microphone in use</string>
-    <string name="microphone_notification_text">The microphone is being used by AmazonChimeSDKDemo.</string>
+    <string name="microphone_notification_text">The microphone is being used by Netizen Labs.</string>
     <string name="screen_capture_notification_tile">Screen Sharing</string>
     <string name="screen_capture_notification_text">Your screen is being shared.</string>
 

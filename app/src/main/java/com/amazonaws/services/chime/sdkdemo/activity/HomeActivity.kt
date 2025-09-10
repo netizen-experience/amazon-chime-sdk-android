@@ -28,7 +28,6 @@ import com.amazonaws.services.chime.sdk.meetings.audiovideo.audio.AudioDeviceCap
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.audio.AudioMode
 import com.amazonaws.services.chime.sdk.meetings.internal.utils.DefaultBackOffRetry
 import com.amazonaws.services.chime.sdk.meetings.internal.utils.HttpUtils
-import com.amazonaws.services.chime.sdk.meetings.utils.Versioning
 import com.amazonaws.services.chime.sdk.meetings.utils.logger.ConsoleLogger
 import com.amazonaws.services.chime.sdk.meetings.utils.logger.LogLevel
 import com.amazonaws.services.chime.sdkdemo.R
@@ -103,7 +102,7 @@ class HomeActivity : AppCompatActivity() {
         findViewById<Button>(R.id.buttonDebugSettings)?.setOnClickListener { showDebugSettings() }
 
         val versionText: TextView = findViewById(R.id.versionText)
-        versionText.text = "${getString(R.string.version_prefix)}${Versioning.sdkVersion()}"
+        versionText.text = "${getString(R.string.version_prefix)}${getString(R.string.version)}"
     }
 
     private fun showDebugSettings() {
