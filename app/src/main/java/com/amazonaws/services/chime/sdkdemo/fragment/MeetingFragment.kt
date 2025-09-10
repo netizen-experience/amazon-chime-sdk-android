@@ -188,10 +188,10 @@ class MeetingFragment : Fragment(),
     private var hasJoinedPrimaryMeeting = false
 
     enum class SubTab(val position: Int) {
-        Attendees(0),
-        Chat(1),
-        Video(2),
-        Screen(3),
+        Video(0),
+        Screen(1),
+        Attendees(2),
+        Chat(3),
         Captions(4),
         Metrics(5)
     }
@@ -393,11 +393,11 @@ class MeetingFragment : Fragment(),
         recyclerViewRoster.layoutManager = LinearLayoutManager(activity)
         rosterAdapter = RosterAdapter(meetingModel.currentRoster.values)
         recyclerViewRoster.adapter = rosterAdapter
-        recyclerViewRoster.visibility = View.VISIBLE
+        recyclerViewRoster.visibility = View.GONE
 
         // Video (camera & content)
         viewVideo = view.findViewById(R.id.subViewVideo)
-        viewVideo.visibility = View.GONE
+        viewVideo.visibility = View.VISIBLE
 
         prevVideoPageButton = view.findViewById(R.id.prevVideoPageButton)
         prevVideoPageButton.setOnClickListener {
@@ -492,11 +492,17 @@ class MeetingFragment : Fragment(),
 
     private fun setupTab(view: View) {
         tabLayout = view.findViewById(R.id.tabLayoutMeetingView)
-        SubTab.values().iterator().forEach {
-            tabLayout.addTab(
-                tabLayout.newTab().setText(it.name).setContentDescription("${it.name} Tab")
-            )
-        }
+        tabLayout.addTab(
+            tabLayout.newTab().setText("Video").setContentDescription("Video Tab")
+        )
+        tabLayout.addTab(
+            tabLayout.newTab().setText("Screen").setContentDescription("Screen Tab")
+        )
+        // SubTab.values().iterator().forEach {
+        //     tabLayout.addTab(
+        //         tabLayout.newTab().setText(it.name).setContentDescription("${it.name} Tab")
+        //     )
+        // }
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 showViewAt(tab?.position ?: SubTab.Attendees.position)
