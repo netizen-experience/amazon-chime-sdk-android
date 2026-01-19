@@ -6,6 +6,9 @@
 package com.amazonaws.services.chime.sdk.meetings.internal.contentshare
 
 import android.content.Context
+import com.amazonaws.services.chime.sdk.meetings.analytics.EventAnalyticsController
+import com.amazonaws.services.chime.sdk.meetings.analytics.EventAttributeName
+import com.amazonaws.services.chime.sdk.meetings.analytics.EventName
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.contentshare.ContentShareObserver
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.contentshare.ContentShareStatus
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.contentshare.ContentShareStatusCode
@@ -17,10 +20,15 @@ import com.amazonaws.services.chime.sdk.meetings.internal.utils.TURNRequestUtils
 import com.amazonaws.services.chime.sdk.meetings.internal.video.TURNCredentials
 import com.amazonaws.services.chime.sdk.meetings.internal.video.TURNRequestParams
 import com.amazonaws.services.chime.sdk.meetings.session.URLRewriter
+import com.amazonaws.services.chime.sdk.meetings.utils.SignalingDroppedError
+import com.amazonaws.services.chime.sdk.meetings.utils.VideoClientFailedError
 import com.amazonaws.services.chime.sdk.meetings.utils.logger.Logger
 import com.xodee.client.audio.audioclient.AudioClient
 import com.xodee.client.video.RemoteVideoSourceInternal
 import com.xodee.client.video.VideoClient
+import com.xodee.client.video.VideoClientEvent
+import com.xodee.client.video.VideoClientEventType
+import kotlin.Any
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,7 +38,8 @@ class DefaultContentShareVideoClientObserver(
     private val logger: Logger,
     private val turnRequestParams: TURNRequestParams,
     private val clientMetricsCollector: ClientMetricsCollector,
-    private val urlRewriter: URLRewriter
+    private val urlRewriter: URLRewriter,
+    private val eventAnalyticsController: EventAnalyticsController
 ) : ContentShareVideoClientObserver {
     private val TAG = "DefaultContentShareVideoClientObserver"
 
@@ -52,6 +61,7 @@ class DefaultContentShareVideoClientObserver(
 
     override fun didConnect(client: VideoClient?, controlStatus: Int) {
         logger.debug(TAG, "content share video client is connected")
+        eventAnalyticsController.publishEvent(EventName.contentShareStarted)
         ObserverUtils.notifyObserverOnMainThread(contentShareObservers) {
             it.onContentShareStarted()
         }
@@ -59,6 +69,11 @@ class DefaultContentShareVideoClientObserver(
 
     override fun didFail(client: VideoClient?, status: Int, controlStatus: Int) {
         logger.info(TAG, "content share video client is failed with $controlStatus")
+
+        eventAnalyticsController.publishEvent(EventName.contentShareFailed, mutableMapOf<EventAttributeName, Any>(
+            EventAttributeName.contentShareErrorMessage to VideoClientFailedError.fromVideoClientStatus(status)
+        ))
+
         resetContentShareVideoClientMetrics()
         ObserverUtils.notifyObserverOnMainThread(contentShareObservers) {
             it.onContentShareStopped(
@@ -71,6 +86,7 @@ class DefaultContentShareVideoClientObserver(
 
     override fun didStop(client: VideoClient?) {
         logger.info(TAG, "content share video client is stopped")
+        eventAnalyticsController.publishEvent(EventName.contentShareStopped)
         resetContentShareVideoClientMetrics()
         ObserverUtils.notifyObserverOnMainThread(contentShareObservers) {
             it.onContentShareStopped(
@@ -138,6 +154,35 @@ class DefaultContentShareVideoClientObserver(
 
     override fun cameraSendIsAvailable(client: VideoClient?, available: Boolean) {
         // No implementation since we don't use default camera for content share
+    }
+
+    override fun didReceiveEvent(client: VideoClient?, event: VideoClientEvent?) {
+        event?.let {
+            logger.info(TAG, "didReceiveEvent: ${it.eventType}")
+            when (it.eventType) {
+                VideoClientEventType.SIGNALING_DROPPED -> {
+                    logger.error(TAG, "Signaling dropped with error: ${it.signalingDroppedError}")
+                    val error = SignalingDroppedError.fromVideoClientSignalingDroppedError(it.signalingDroppedError)
+                    val attributes = mutableMapOf<EventAttributeName, Any>(
+                        EventAttributeName.signalingDroppedErrorMessage to error
+                    )
+                    eventAnalyticsController.publishEvent(EventName.contentShareSignalingDropped, attributes)
+                }
+                VideoClientEventType.SIGNALING_OPENED -> {
+                    val attributes = mutableMapOf<EventAttributeName, Any>(
+                        EventAttributeName.signalingOpenDurationMs to it.signalingOpenDurationMs
+                    )
+                    eventAnalyticsController.publishEvent(EventName.contentShareSignalingOpened, attributes)
+                }
+                VideoClientEventType.ICE_GATHERING_COMPLETED -> {
+                    val attributes = mutableMapOf<EventAttributeName, Any>(
+                        EventAttributeName.iceGatheringDurationMs to it.iceGatheringDurationMs
+                    )
+                    eventAnalyticsController.publishEvent(EventName.contentShareIceGatheringCompleted, attributes)
+                }
+                VideoClientEventType.OTHER -> {}
+            }
+        }
     }
 
     override fun didReceiveFrame(

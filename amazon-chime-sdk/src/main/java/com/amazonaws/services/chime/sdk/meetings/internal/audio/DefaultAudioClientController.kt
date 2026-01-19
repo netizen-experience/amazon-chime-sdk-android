@@ -19,10 +19,12 @@ import com.amazonaws.services.chime.sdk.meetings.audiovideo.audio.AudioDeviceCap
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.audio.AudioMode
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.audio.AudioRecordingPresetOverride
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.audio.AudioStreamType
+import com.amazonaws.services.chime.sdk.meetings.ingestion.VoiceFocusError
 import com.amazonaws.services.chime.sdk.meetings.internal.utils.AppInfoUtil
 import com.amazonaws.services.chime.sdk.meetings.session.MeetingSessionCredentials
 import com.amazonaws.services.chime.sdk.meetings.session.MeetingSessionStatus
 import com.amazonaws.services.chime.sdk.meetings.session.MeetingSessionStatusCode
+import com.amazonaws.services.chime.sdk.meetings.utils.MediaError
 import com.amazonaws.services.chime.sdk.meetings.utils.logger.Logger
 import com.xodee.client.audio.audioclient.AudioClient
 import com.xodee.client.audio.audioclient.AudioClient.AudioDeviceCapabilitiesInternal
@@ -118,7 +120,17 @@ class DefaultAudioClientController(
         if (getRoute() == route) return true
         logger.info(TAG, "Setting route to $route")
 
-        return audioClient.setRoute(route) == AUDIO_CLIENT_RESULT_SUCCESS
+        val result = audioClient.setRoute(route)
+        if (result == AUDIO_CLIENT_RESULT_SUCCESS) {
+            return true
+        } else {
+            val attributes = mutableMapOf<EventAttributeName, Any>(
+                EventAttributeName.audioInputErrorMessage to MediaError.FailedToSetRoute
+            )
+            eventAnalyticsController.publishEvent(EventName.audioInputFailed, attributes)
+            logger.error(TAG, "Failed to set route. Error: $result")
+            return false
+        }
     }
 
     private fun getDefaultRecordingPreset(): AudioClient.AudioRecordingPreset {
@@ -305,12 +317,29 @@ class DefaultAudioClientController(
 
     override fun setVoiceFocusEnabled(enabled: Boolean): Boolean {
         if (audioClientState == AudioClientState.STARTED) {
-            return AudioClient.AUDIO_CLIENT_OK == audioClient.setVoiceFocusNoiseSuppression(enabled)
+            val result = audioClient.setVoiceFocusNoiseSuppression(enabled)
+
+            if (result == AudioClient.AUDIO_CLIENT_OK) {
+                val event = if (enabled) EventName.voiceFocusEnabled else EventName.voiceFocusDisabled
+                eventAnalyticsController.publishEvent(event, mutableMapOf(), false)
+                return true
+            } else {
+                val event = if (enabled) EventName.voiceFocusEnableFailed else EventName.voiceFocusDisableFailed
+                val error = VoiceFocusError.fromXalError(result)
+                eventAnalyticsController.publishEvent(event,
+                    mutableMapOf(EventAttributeName.voiceFocusErrorMessage to error),
+                    false)
+                return false
+            }
         } else {
             logger.error(
                 TAG,
                 "Failed to set VoiceFocus to $enabled; audio client state is $audioClientState"
             )
+            val event = if (enabled) EventName.voiceFocusEnableFailed else EventName.voiceFocusDisableFailed
+            eventAnalyticsController.publishEvent(event,
+                mutableMapOf(EventAttributeName.voiceFocusErrorMessage to VoiceFocusError.audioClientNotStarted),
+                false)
             return false
         }
     }

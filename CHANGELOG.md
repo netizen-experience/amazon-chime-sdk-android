@@ -1,3 +1,18 @@
+## [0.25.2] - 2025-12-09
+
+### Changed
+* Guard video client stop with a mutex
+
+### Added
+* Added following meeting events: contentShareStartRequested/contentShareStarted/contentShareStopped/contentShareFailed/voiceFocusEnabled/voiceFocusDisabled/voiceFocusEnableFailed/voiceFocusDisableFailed/videoCaptureSessionInterruptionBegan/videoCaptureSessionInterruptionEnded/networkConnectionTypeChanged/signalingDropped/iceGatheringCompleted
+* Added following meeting event attributes: voiceFocusErrorMessage/lowPowerModeEnabled/networkConnectionType/signalingOpenDurationMs/iceGatheringDurationMs
+
+## [0.25.1] - 2025-10-02
+
+### Added
+* Added following meeting events: meetingReconnected/audioInputFailed/videoClientSignalingDropped/contentShareSignalingDropped/appStateChanged/appMemoryLow/contentShareStartRequested/contentShareStarted/contentShareStopped/contentShareFailed/voiceFocusEnabled/voiceFocusDisabled/voiceFocusEnableFailed/voiceFocusDisableFailed/videoCaptureSessionInterruptionBegan/videoCaptureSessionInterruptionEnded
+* Added following meeting event attributes: meetingReconnectDurationMs/audioInputErrorMessage/signalingDroppedErrorMessage/appState/batteryLevel/batteryState/contentShareErrorMessage/voiceFocusErrorMessage/lowPowerModeEnabled
+
 ## [0.25.0] - 2025-06-17
 
 ### Changed

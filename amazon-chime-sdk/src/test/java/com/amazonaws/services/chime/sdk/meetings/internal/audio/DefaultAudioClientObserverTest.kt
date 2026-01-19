@@ -9,7 +9,6 @@ import android.util.Log
 import com.amazonaws.services.chime.sdk.meetings.TestConstant
 import com.amazonaws.services.chime.sdk.meetings.analytics.EventAnalyticsController
 import com.amazonaws.services.chime.sdk.meetings.analytics.EventName
-import com.amazonaws.services.chime.sdk.meetings.analytics.MeetingHistoryEventName
 import com.amazonaws.services.chime.sdk.meetings.analytics.MeetingStatsCollector
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.AttendeeInfo
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.AudioVideoObserver
@@ -26,6 +25,7 @@ import com.amazonaws.services.chime.sdk.meetings.audiovideo.TranscriptionStatus
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.TranscriptionStatusType
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.VolumeLevel
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.VolumeUpdate
+import com.amazonaws.services.chime.sdk.meetings.ingestion.AppStateMonitor
 import com.amazonaws.services.chime.sdk.meetings.internal.AttendeeStatus
 import com.amazonaws.services.chime.sdk.meetings.internal.SessionStateControllerAction
 import com.amazonaws.services.chime.sdk.meetings.internal.metric.ClientMetricsCollector
@@ -78,6 +78,9 @@ class DefaultAudioClientObserverTest {
 
     @MockK
     private lateinit var mockAudioVideoObserver: AudioVideoObserver
+
+    @MockK
+    private lateinit var mockAppStateMonitor: AppStateMonitor
 
     @MockK
     private lateinit var mockRealtimeObserver: RealtimeObserver
@@ -151,7 +154,8 @@ class DefaultAudioClientObserverTest {
                 mockClientMetricsCollector,
                 mockConfiguration,
                 mockMeetingStatsCollector,
-                mockEventAnalyticsController
+                mockEventAnalyticsController,
+                mockAppStateMonitor
             )
         audioClientObserver.subscribeToAudioClientStateChange(mockAudioVideoObserver)
         audioClientObserver.subscribeToRealTimeEvents(mockRealtimeObserver)
@@ -988,9 +992,8 @@ class DefaultAudioClientObserverTest {
         }
 
         verify(exactly = 1) { mockMeetingStatsCollector.incrementRetryCount() }
-        verify(exactly = 1) { mockMeetingStatsCollector.updateMeetingStartTimeMs() }
-        verify(exactly = 1) { mockEventAnalyticsController.pushHistory(MeetingHistoryEventName.meetingReconnected) }
-        verify(exactly = 1) { mockEventAnalyticsController.publishEvent(EventName.meetingStartSucceeded) }
+        verify(exactly = 1) { mockMeetingStatsCollector.updateMeetingReconnectedTimeMs() }
+        verify(exactly = 1) { mockEventAnalyticsController.publishEvent(EventName.meetingReconnected) }
     }
 
     @Test
@@ -1026,7 +1029,10 @@ class DefaultAudioClientObserverTest {
             )
         }
 
-        verify(exactly = 1) { mockAudioVideoObserver.onAudioSessionDropped() }
+        verify(exactly = 1) {
+            mockMeetingStatsCollector.updateMeetingStartReconnectingTimeMs()
+            mockAudioVideoObserver.onAudioSessionDropped()
+        }
     }
 
     @Test
@@ -1137,6 +1143,7 @@ class DefaultAudioClientObserverTest {
         verify(exactly = 1, timeout = TestConstant.globalScopeTimeoutMs) { mockAudioClient.stopSession() }
     }
 
+    @Test
     fun `onAudioClientStateChange should stop session and notify of session stop event when finish disconnecting while connecting`() {
 
         runBlockingTest {
@@ -1154,6 +1161,7 @@ class DefaultAudioClientObserverTest {
         verify(exactly = 1, timeout = TestConstant.globalScopeTimeoutMs) { mockAudioVideoObserver.onAudioSessionStopped(any()) }
         verify(exactly = 1, timeout = TestConstant.globalScopeTimeoutMs) { mockAudioClient.stopSession() }
         verify(exactly = 1, timeout = TestConstant.globalScopeTimeoutMs) { mockEventAnalyticsController.publishEvent(EventName.meetingEnded, any()) }
+        verify(exactly = 1, timeout = TestConstant.globalScopeTimeoutMs) { mockAppStateMonitor.stop() }
     }
 
     fun `onAudioClientStateChange should stop session and notify of session stop event when finish disconnecting while connected`() {

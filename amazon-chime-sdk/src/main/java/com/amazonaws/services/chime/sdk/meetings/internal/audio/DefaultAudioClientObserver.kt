@@ -8,7 +8,6 @@ package com.amazonaws.services.chime.sdk.meetings.internal.audio
 import com.amazonaws.services.chime.sdk.meetings.analytics.EventAnalyticsController
 import com.amazonaws.services.chime.sdk.meetings.analytics.EventAttributeName
 import com.amazonaws.services.chime.sdk.meetings.analytics.EventName
-import com.amazonaws.services.chime.sdk.meetings.analytics.MeetingHistoryEventName
 import com.amazonaws.services.chime.sdk.meetings.analytics.MeetingStatsCollector
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.AttendeeInfo
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.AudioVideoObserver
@@ -27,6 +26,7 @@ import com.amazonaws.services.chime.sdk.meetings.audiovideo.TranscriptionStatus
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.TranscriptionStatusType
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.VolumeLevel
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.VolumeUpdate
+import com.amazonaws.services.chime.sdk.meetings.ingestion.AppStateMonitor
 import com.amazonaws.services.chime.sdk.meetings.internal.AttendeeStatus
 import com.amazonaws.services.chime.sdk.meetings.internal.SessionStateControllerAction
 import com.amazonaws.services.chime.sdk.meetings.internal.metric.ClientMetricsCollector
@@ -52,6 +52,7 @@ class DefaultAudioClientObserver(
     private val configuration: MeetingSessionConfiguration,
     private val meetingStatsCollector: MeetingStatsCollector,
     private val eventAnalyticsController: EventAnalyticsController,
+    private val appStateMonitor: AppStateMonitor,
     var audioClient: AudioClient? = null
 ) : AudioClientObserver {
     private val TAG = "DefaultAudioClientObserver"
@@ -84,7 +85,7 @@ class DefaultAudioClientObserver(
 
     override fun onAudioClientStateChange(newInternalAudioState: Int, newInternalAudioStatus: Int) {
         val newAudioStatus: MeetingSessionStatusCode? = toAudioStatus(newInternalAudioStatus)
-        var newAudioState: SessionStateControllerAction = toAudioClientState(newInternalAudioState, newAudioStatus)
+        val newAudioState: SessionStateControllerAction = toAudioClientState(newInternalAudioState, newAudioStatus)
 
         if (newAudioStatus == null) {
             logger.warn(
@@ -102,15 +103,18 @@ class DefaultAudioClientObserver(
             SessionStateControllerAction.FinishConnecting -> {
                 when (currentAudioState) {
                     SessionStateControllerAction.Connecting -> {
-                        notifyStartSucceeded()
+                        meetingStatsCollector.updateMeetingStartTimeMs()
+                        eventAnalyticsController.publishEvent(
+                            EventName.meetingStartSucceeded
+                        )
                         notifyAudioClientObserver { observer -> observer.onAudioSessionStarted(false) }
                     }
                     SessionStateControllerAction.Reconnecting -> {
                         meetingStatsCollector.incrementRetryCount()
-                        eventAnalyticsController.pushHistory(
-                            MeetingHistoryEventName.meetingReconnected
+                        meetingStatsCollector.updateMeetingReconnectedTimeMs()
+                        eventAnalyticsController.publishEvent(
+                            EventName.meetingReconnected
                         )
-                        notifyStartSucceeded()
                         notifyAudioClientObserver {
                             observer -> observer.onAudioSessionStarted(true)
                             primaryMeetingPromotionObserver?.onPrimaryMeetingDemotion(MeetingSessionStatus(MeetingSessionStatusCode.AudioInternalServerError))
@@ -137,6 +141,7 @@ class DefaultAudioClientObserver(
                 }
             }
             SessionStateControllerAction.Reconnecting -> {
+                meetingStatsCollector.updateMeetingStartReconnectingTimeMs()
                 if (currentAudioState == SessionStateControllerAction.FinishConnecting) {
                     notifyAudioClientObserver { observer -> observer.onAudioSessionDropped() }
                 }
@@ -177,13 +182,6 @@ class DefaultAudioClientObserver(
         }
         currentAudioState = newAudioState
         currentAudioStatus = newAudioStatus
-    }
-
-    private fun notifyStartSucceeded() {
-        meetingStatsCollector.updateMeetingStartTimeMs()
-        eventAnalyticsController.publishEvent(
-            EventName.meetingStartSucceeded
-        )
     }
 
     override fun onVolumeStateChange(attendeeUpdates: Array<out AttendeeUpdate>?) {
@@ -574,8 +572,10 @@ class DefaultAudioClientObserver(
 
     private fun handleAudioClientStop(statusCode: MeetingSessionStatusCode?) {
         if (audioClient != null) {
+            // TODO: assess if only notifyAudioClientObserver should be in GlobalScope.launch
             GlobalScope.launch {
                 audioClient?.stopSession()
+                appStateMonitor.stop()
                 DefaultAudioClientController.audioClientState = AudioClientState.STOPPED
                 notifyAudioClientObserver { observer ->
                     observer.onAudioSessionStopped(MeetingSessionStatus(statusCode))

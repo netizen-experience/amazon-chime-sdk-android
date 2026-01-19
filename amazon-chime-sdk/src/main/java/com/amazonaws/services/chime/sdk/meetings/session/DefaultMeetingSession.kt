@@ -19,6 +19,7 @@ import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.DefaultVideoTi
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.gl.DefaultEglCoreFactory
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.gl.EglCoreFactory
 import com.amazonaws.services.chime.sdk.meetings.device.DefaultDeviceController
+import com.amazonaws.services.chime.sdk.meetings.ingestion.DefaultAppStateMonitor
 import com.amazonaws.services.chime.sdk.meetings.ingestion.DefaultMeetingEventReporterFactory
 import com.amazonaws.services.chime.sdk.meetings.ingestion.EventReporterFactory
 import com.amazonaws.services.chime.sdk.meetings.ingestion.IngestionConfiguration
@@ -64,12 +65,18 @@ class DefaultMeetingSession @JvmOverloads constructor(
 
         val eventReporter = eventReporterFactory.createEventReporter()
 
+        val appStateMonitor = DefaultAppStateMonitor(logger, context.applicationContext as? android.app.Application)
+
         eventAnalyticsController = DefaultEventAnalyticsController(
             logger,
             configuration,
             meetingStatsCollector,
+            appStateMonitor,
             eventReporter
         )
+
+        // Bind the EventAnalyticsController as the handler for app state changes
+        appStateMonitor.bindHandler(eventAnalyticsController)
 
         val metricsCollector = DefaultClientMetricsCollector()
         val audioClientObserver =
@@ -78,7 +85,8 @@ class DefaultMeetingSession @JvmOverloads constructor(
                 metricsCollector,
                 configuration,
                 meetingStatsCollector,
-                eventAnalyticsController
+                eventAnalyticsController,
+                appStateMonitor
             )
 
         val audioClient =
@@ -116,7 +124,8 @@ class DefaultMeetingSession @JvmOverloads constructor(
                 turnRequestParams,
                 metricsCollector,
                 videoClientStateController,
-                configuration.urls.urlRewriter
+                configuration.urls.urlRewriter,
+                eventAnalyticsController
             )
 
         val videoClientFactory = DefaultVideoClientFactory()
@@ -150,7 +159,8 @@ class DefaultMeetingSession @JvmOverloads constructor(
                 context,
                 audioClientController,
                 videoClientController,
-                eventAnalyticsController
+                eventAnalyticsController,
+                logger
             )
 
         val realtimeController =
@@ -191,7 +201,8 @@ class DefaultMeetingSession @JvmOverloads constructor(
                 logger,
                 contentShareTurnRequestParams,
                 metricsCollector,
-                contentShareConfiguration.urls.urlRewriter
+                contentShareConfiguration.urls.urlRewriter,
+                eventAnalyticsController
             )
 
         val contentShareVideoClientController =
@@ -201,7 +212,8 @@ class DefaultMeetingSession @JvmOverloads constructor(
                 contentShareObserver,
                 contentShareConfiguration,
                 videoClientFactory,
-                eglCoreFactory
+                eglCoreFactory,
+                eventAnalyticsController
             )
 
         val contentShareController =
@@ -218,7 +230,8 @@ class DefaultMeetingSession @JvmOverloads constructor(
             videoTileController,
             activeSpeakerDetector,
             contentShareController,
-            eventAnalyticsController
+            eventAnalyticsController,
+            appStateMonitor
         )
     }
 }

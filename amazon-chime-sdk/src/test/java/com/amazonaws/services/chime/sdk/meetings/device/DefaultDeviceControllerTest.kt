@@ -11,11 +11,14 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.AudioRecordingConfiguration
 import com.amazonaws.services.chime.sdk.meetings.analytics.EventAnalyticsController
-import com.amazonaws.services.chime.sdk.meetings.analytics.MeetingHistoryEventName
+import com.amazonaws.services.chime.sdk.meetings.analytics.EventAttributeName
+import com.amazonaws.services.chime.sdk.meetings.analytics.EventName
 import com.amazonaws.services.chime.sdk.meetings.internal.audio.AudioClientController
 import com.amazonaws.services.chime.sdk.meetings.internal.audio.AudioClientState
 import com.amazonaws.services.chime.sdk.meetings.internal.audio.DefaultAudioClientController
 import com.amazonaws.services.chime.sdk.meetings.internal.video.VideoClientController
+import com.amazonaws.services.chime.sdk.meetings.utils.MediaError
+import com.amazonaws.services.chime.sdk.meetings.utils.logger.Logger
 import com.xodee.client.audio.audioclient.AudioClient
 import io.mockk.MockKAnnotations
 import io.mockk.every
@@ -23,6 +26,7 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.mockkClass
 import io.mockk.mockkStatic
 import io.mockk.verify
+import kotlin.Any
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineDispatcher
@@ -76,6 +80,9 @@ class DefaultDeviceControllerTest {
     @MockK
     private lateinit var deviceChangeObserver: DeviceChangeObserver
 
+    @MockK
+    private lateinit var mockLogger: Logger
+
     private lateinit var deviceController: DefaultDeviceController
 
     private val testDispatcher = TestCoroutineDispatcher()
@@ -87,6 +94,7 @@ class DefaultDeviceControllerTest {
             audioClientController,
             videoClientController,
             eventAnalyticsController,
+            mockLogger,
             audioManager,
             24
         )
@@ -101,6 +109,7 @@ class DefaultDeviceControllerTest {
             audioClientController,
             videoClientController,
             eventAnalyticsController,
+            mockLogger,
             audioManager,
             21
         )
@@ -133,22 +142,6 @@ class DefaultDeviceControllerTest {
     fun tearDown() {
         Dispatchers.resetMain()
         testDispatcher.cleanupTestCoroutines()
-    }
-
-    @Test
-    fun `deviceController should call addMeetingHistoryEvent when audio device is selected`() {
-        setupForNewAPILevel()
-        every { audioClientController.setRoute(any()) } returns true
-        mockkStatic(DefaultAudioClientController::class)
-        DefaultAudioClientController.audioClientState = AudioClientState.STARTED
-        deviceController.chooseAudioDevice(MediaDevice(
-            "speaker",
-            MediaDeviceType.AUDIO_BUILTIN_SPEAKER
-        ))
-
-        verify(exactly = 1) {
-            eventAnalyticsController.pushHistory(MeetingHistoryEventName.audioInputSelected)
-        }
     }
 
     @Test
@@ -204,6 +197,19 @@ class DefaultDeviceControllerTest {
                         it.label == "my bluetooth headphone (Bluetooth)"
             )
         }
+    }
+
+    @Test
+    fun `listAudioDevices should public audioInputFailed event when no device available`() {
+        setupForNewAPILevel()
+        every { audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS) } returns arrayOf()
+
+        deviceController.listAudioDevices()
+
+        val attributes = mutableMapOf<EventAttributeName, Any>(
+            EventAttributeName.audioInputErrorMessage to MediaError.NoAudioDevices
+        )
+        verify(exactly = 1) { eventAnalyticsController.publishEvent(EventName.audioInputFailed, attributes) }
     }
 
     @Test
@@ -352,6 +358,42 @@ class DefaultDeviceControllerTest {
         )
 
         verify { audioClientController.setRoute(AudioClient.SPK_STREAM_ROUTE_RECEIVER) }
+    }
+
+    @Test
+    fun `chooseAudioDevice should call publishEvent when setRoute`() {
+        setupForOldAPILevel()
+        every { audioClientController.setRoute(any()) } returns true
+        mockkStatic(DefaultAudioClientController::class)
+        DefaultAudioClientController.audioClientState = AudioClientState.STARTED
+        deviceController.chooseAudioDevice(
+            MediaDevice(
+                "usb headset",
+                MediaDeviceType.AUDIO_USB_HEADSET
+            )
+        )
+
+        verify { eventAnalyticsController.publishEvent(EventName.audioInputSelected, mutableMapOf(
+            EventAttributeName.audioDeviceType to MediaDeviceType.AUDIO_USB_HEADSET.toString()
+        ), false) }
+    }
+
+    @Test
+    fun `deviceController should call publishEvent when audio device is selected`() {
+        setupForNewAPILevel()
+        every { audioClientController.setRoute(any()) } returns true
+        mockkStatic(DefaultAudioClientController::class)
+        DefaultAudioClientController.audioClientState = AudioClientState.STARTED
+        deviceController.chooseAudioDevice(MediaDevice(
+            "speaker",
+            MediaDeviceType.AUDIO_BUILTIN_SPEAKER
+        ))
+
+        verify(exactly = 1) {
+            eventAnalyticsController.publishEvent(EventName.audioInputSelected, mutableMapOf(
+                EventAttributeName.audioDeviceType to MediaDeviceType.AUDIO_BUILTIN_SPEAKER.toString()
+            ), false)
+        }
     }
 
     @Test

@@ -12,7 +12,9 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import com.amazonaws.services.chime.sdk.meetings.analytics.EventAnalyticsController
 import com.amazonaws.services.chime.sdk.meetings.analytics.EventAnalyticsObserver
+import com.amazonaws.services.chime.sdk.meetings.analytics.EventAttributeName
 import com.amazonaws.services.chime.sdk.meetings.analytics.EventAttributes
+import com.amazonaws.services.chime.sdk.meetings.analytics.EventName
 import com.amazonaws.services.chime.sdk.meetings.analytics.MeetingHistoryEvent
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.audio.AudioDeviceCapabilities
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.audio.activespeakerdetector.ActiveSpeakerDetectorFacade
@@ -32,11 +34,13 @@ import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.VideoTileObser
 import com.amazonaws.services.chime.sdk.meetings.device.DeviceChangeObserver
 import com.amazonaws.services.chime.sdk.meetings.device.DeviceController
 import com.amazonaws.services.chime.sdk.meetings.device.MediaDevice
+import com.amazonaws.services.chime.sdk.meetings.ingestion.AppStateMonitor
 import com.amazonaws.services.chime.sdk.meetings.realtime.RealtimeControllerFacade
 import com.amazonaws.services.chime.sdk.meetings.realtime.RealtimeObserver
 import com.amazonaws.services.chime.sdk.meetings.realtime.TranscriptEventObserver
 import com.amazonaws.services.chime.sdk.meetings.realtime.datamessage.DataMessageObserver
 import com.amazonaws.services.chime.sdk.meetings.session.MeetingSessionCredentials
+import com.amazonaws.services.chime.sdk.meetings.utils.PermissionError
 
 class DefaultAudioVideoFacade(
     private val context: Context,
@@ -46,7 +50,8 @@ class DefaultAudioVideoFacade(
     private val videoTileController: VideoTileController,
     private val activeSpeakerDetector: ActiveSpeakerDetectorFacade,
     private val contentShareController: ContentShareController,
-    private val eventAnalyticsController: EventAnalyticsController
+    private val eventAnalyticsController: EventAnalyticsController,
+    private val appStateMonitor: AppStateMonitor
 ) : AudioVideoFacade {
 
     override fun start() {
@@ -54,6 +59,7 @@ class DefaultAudioVideoFacade(
     }
 
     override fun start(audioVideoConfiguration: AudioVideoConfiguration) {
+        appStateMonitor.start()
         checkAudioPermissions(audioVideoConfiguration.audioDeviceCapabilities)
         audioVideoController.start(audioVideoConfiguration)
     }
@@ -75,6 +81,7 @@ class DefaultAudioVideoFacade(
     }
 
     override fun stop() {
+        appStateMonitor.stop()
         audioVideoController.stop()
     }
 
@@ -272,6 +279,10 @@ class DefaultAudioVideoFacade(
     private fun checkAudioPermissions(audioDeviceCapabilities: AudioDeviceCapabilities) {
         val hasRequiredPermissions: Boolean = audioDeviceCapabilities.requiredPermissions().all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
         if (!hasRequiredPermissions) {
+            val attributes = mutableMapOf<EventAttributeName, Any>(
+                EventAttributeName.audioInputErrorMessage to PermissionError.AudioPermissionError
+            )
+            eventAnalyticsController.publishEvent(EventName.audioInputFailed, attributes)
             throw SecurityException("Missing necessary permissions for WebRTC: ${audioDeviceCapabilities.requiredPermissions().joinToString()}")
         }
     }

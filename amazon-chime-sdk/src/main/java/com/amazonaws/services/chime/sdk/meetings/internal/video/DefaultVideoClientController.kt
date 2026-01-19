@@ -34,6 +34,8 @@ import com.xodee.client.video.VideoSubscriptionConfigurationInternal
 import java.security.InvalidParameterException
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class DefaultVideoClientController(
     private val context: Context,
@@ -64,7 +66,7 @@ class DefaultVideoClientController(
     private val cameraCaptureSource: DefaultCameraCaptureSource
     private var videoSourceAdapter = VideoSourceAdapter()
     private var isUsingInternalCaptureSource = false
-
+    private val videoClientStopMutex = Mutex()
     init {
         videoClientStateController.bindLifecycleHandler(this)
 
@@ -74,11 +76,9 @@ class DefaultVideoClientController(
             DefaultCameraCaptureSource(
                 context,
                 logger,
-                surfaceTextureCaptureSourceFactory
-            ).apply {
-                eventAnalyticsController =
-                    this@DefaultVideoClientController.eventAnalyticsController
-            }
+                surfaceTextureCaptureSourceFactory,
+                eventAnalyticsController
+            )
     }
 
     private var videoClient: VideoClient? = null
@@ -102,10 +102,16 @@ class DefaultVideoClientController(
             // So it doesn't call it spuriously
             videoClientObserver.primaryMeetingPromotionObserver = null
 
-            videoClientStateController.stop()
+            videoClientStopMutex.withLock {
+                // Race conditions in video client stop functions may lead to crashes at pointer deallocation
+                // if multiple such threads are called at the same time.
+                videoClientStateController.stop()
 
-            eglCore?.release()
-            eglCore = null
+                // We put release eglCore under mutex as a race condition may decrease its reference counter
+                // below 0 and cause crashes if multiple such calls happen together.
+                eglCore?.release()
+                eglCore = null
+            }
         }
     }
 

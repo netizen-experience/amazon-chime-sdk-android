@@ -5,16 +5,24 @@
 
 package com.amazonaws.services.chime.sdk.meetings.analytics
 
+import com.amazonaws.services.chime.sdk.meetings.ingestion.AppState
+import com.amazonaws.services.chime.sdk.meetings.ingestion.AppStateMonitor
+import com.amazonaws.services.chime.sdk.meetings.ingestion.BatteryState
 import com.amazonaws.services.chime.sdk.meetings.ingestion.EventReporter
+import com.amazonaws.services.chime.sdk.meetings.ingestion.NetworkConnectionType
+import com.amazonaws.services.chime.sdk.meetings.internal.ingestion.SDKEvent
 import com.amazonaws.services.chime.sdk.meetings.internal.utils.DeviceUtils
 import com.amazonaws.services.chime.sdk.meetings.session.MeetingSessionConfiguration
 import com.amazonaws.services.chime.sdk.meetings.session.MeetingSessionCredentials
 import com.amazonaws.services.chime.sdk.meetings.utils.logger.Logger
 import io.mockk.MockKAnnotations
+import io.mockk.Runs
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
+import io.mockk.just
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.unmockkObject
 import io.mockk.verify
@@ -28,6 +36,8 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -36,7 +46,7 @@ import org.junit.Test
 class DefaultEventAnalyticsControllerTest {
     private val testDispatcher = TestCoroutineDispatcher()
 
-    private lateinit var testEventAnalyticsController: EventAnalyticsController
+    private lateinit var testEventAnalyticsController: DefaultEventAnalyticsController
 
     @MockK
     private lateinit var mockLogger: Logger
@@ -50,12 +60,19 @@ class DefaultEventAnalyticsControllerTest {
     @MockK
     private lateinit var mockMeetingStatsCollector: MeetingStatsCollector
 
-    private val meetingDurationAttribute: EventAttributes =
-        mutableMapOf(EventAttributeName.meetingDurationMs to 1000L)
+    @MockK
+    private lateinit var mockAppStateMonitor: AppStateMonitor
+
+    private val meetingAttributes: EventAttributes = mutableMapOf()
+    private val mockMeetingDurationMs = 1000L
+    private val mockMeetingReconnectDurationMs = 500L
 
     @Before
     fun setup() {
         mockkStatic(Calendar::class)
+
+        meetingAttributes[EventAttributeName.meetingDurationMs] = mockMeetingDurationMs
+        meetingAttributes[EventAttributeName.meetingReconnectDurationMs] = mockMeetingReconnectDurationMs
 
         MockKAnnotations.init(this, relaxUnitFun = true)
         testEventAnalyticsController =
@@ -63,9 +80,10 @@ class DefaultEventAnalyticsControllerTest {
                 mockLogger,
                 mockMeetingSessionConfiguration,
                 mockMeetingStatsCollector,
+                mockAppStateMonitor,
                 eventReporter
             )
-        every { mockMeetingStatsCollector.getMeetingStatsEventAttributes() } returns meetingDurationAttribute
+        every { mockMeetingStatsCollector.getMeetingStatsEventAttributes() } returns meetingAttributes
         every { mockMeetingStatsCollector.getMeetingHistory() } returns emptyList()
         every { mockMeetingSessionConfiguration.credentials } returns MeetingSessionCredentials(
             "attendeeId",
@@ -82,6 +100,10 @@ class DefaultEventAnalyticsControllerTest {
         every { DeviceUtils.sdkName } returns "sdkName"
         every { DeviceUtils.osName } returns "osName"
         every { DeviceUtils.osVersion } returns "osVersion"
+        every { mockAppStateMonitor.appState } returns AppState.ACTIVE
+        every { mockAppStateMonitor.getBatteryLevel() } returns 0.75f
+        every { mockAppStateMonitor.getBatteryState() } returns BatteryState.CHARGING
+        every { mockAppStateMonitor.isBatterySaverOn() } returns true
 
         Dispatchers.setMain(testDispatcher)
     }
@@ -123,7 +145,32 @@ class DefaultEventAnalyticsControllerTest {
     fun `publishEvent should invoked EventReporter's report`() {
         testEventAnalyticsController.publishEvent(EventName.meetingFailed)
 
+        every { eventReporter.report(any()) }
+
         verify(exactly = 1) { eventReporter.report(any()) }
+    }
+
+    @Test
+    fun `publishEvent should remove meetingReconnectedDurationMs if not meetingReconnected event`() {
+        val slot = slot<SDKEvent>()
+        every { eventReporter.report(capture(slot)) } just Runs
+        testEventAnalyticsController.publishEvent(EventName.meetingFailed)
+
+        verify(exactly = 1) { eventReporter.report(any()) }
+        assertNotNull(slot.captured.eventAttributes[EventAttributeName.meetingDurationMs.name])
+        assertNull(slot.captured.eventAttributes[EventAttributeName.meetingReconnectDurationMs.name])
+    }
+
+    @Test
+    fun `publishEvent should contain meetingReconnectedDurationMs if meetingReconnected event`() {
+        val slot = slot<SDKEvent>()
+        every { eventReporter.report(capture(slot)) } just Runs
+
+        testEventAnalyticsController.publishEvent(EventName.meetingReconnected)
+
+        verify(exactly = 1) { eventReporter.report(any()) }
+        assertNotNull(slot.captured.eventAttributes[EventAttributeName.meetingDurationMs.name])
+        assertNotNull(slot.captured.eventAttributes[EventAttributeName.meetingReconnectDurationMs.name])
     }
 
     @Test
@@ -195,5 +242,92 @@ class DefaultEventAnalyticsControllerTest {
         testEventAnalyticsController.getMeetingHistory()
 
         verify { mockMeetingStatsCollector.getMeetingHistory() }
+    }
+
+    @Test
+    fun `publishEvent should include appState, batteryLevel, and batteryState in event attributes`() {
+        val slot = slot<SDKEvent>()
+        every { eventReporter.report(capture(slot)) } just Runs
+
+        testEventAnalyticsController.publishEvent(EventName.meetingFailed)
+
+        verify(exactly = 1) { eventReporter.report(any()) }
+
+        val eventAttributes = slot.captured.eventAttributes
+        assertEquals("Active", eventAttributes[EventAttributeName.appState.name])
+        assertEquals(0.75f, eventAttributes[EventAttributeName.batteryLevel.name])
+        assertEquals("Charging", eventAttributes[EventAttributeName.batteryState.name])
+        assertEquals(true.toString(), eventAttributes[EventAttributeName.lowPowerModeEnabled.name])
+    }
+
+    @Test
+    fun `publishEvent should include appState and batteryState but not batteryLevel when battery level is null`() {
+        // Mock battery level as null
+        every { mockAppStateMonitor.getBatteryLevel() } returns null
+
+        val slot = slot<SDKEvent>()
+        every { eventReporter.report(capture(slot)) } just Runs
+
+        testEventAnalyticsController.publishEvent(EventName.meetingFailed)
+
+        verify(exactly = 1) { eventReporter.report(any()) }
+
+        val eventAttributes = slot.captured.eventAttributes
+        assertEquals("Active", eventAttributes[EventAttributeName.appState.name])
+        assertFalse(eventAttributes.containsKey(EventAttributeName.batteryLevel.name))
+        assertEquals("Charging", eventAttributes[EventAttributeName.batteryState.name])
+        assertEquals(true.toString(), eventAttributes[EventAttributeName.lowPowerModeEnabled.name])
+    }
+
+    @Test
+    fun `pushHistory should include appState, batteryLevel, and batteryState in event attributes`() {
+        val slot = slot<SDKEvent>()
+        every { eventReporter.report(capture(slot)) } just Runs
+
+        testEventAnalyticsController.pushHistory(MeetingHistoryEventName.meetingReconnected)
+
+        verify(exactly = 1) { eventReporter.report(any()) }
+
+        val eventAttributes = slot.captured.eventAttributes
+        assertEquals("Active", eventAttributes[EventAttributeName.appState.name])
+        assertEquals(0.75f, eventAttributes[EventAttributeName.batteryLevel.name])
+        assertEquals("Charging", eventAttributes[EventAttributeName.batteryState.name])
+        assertEquals(true.toString(), eventAttributes[EventAttributeName.lowPowerModeEnabled.name])
+    }
+
+    @Test
+    fun `pushHistory should include appState, batteryState, and lowPowerModeEnabled but not batteryLevel when battery level is null`() {
+        // Mock battery level as null
+        every { mockAppStateMonitor.getBatteryLevel() } returns null
+
+        val slot = slot<SDKEvent>()
+        every { eventReporter.report(capture(slot)) } just Runs
+
+        testEventAnalyticsController.pushHistory(MeetingHistoryEventName.meetingReconnected)
+
+        verify(exactly = 1) { eventReporter.report(any()) }
+
+        val eventAttributes = slot.captured.eventAttributes
+        assertEquals("Active", eventAttributes[EventAttributeName.appState.name])
+        assertFalse(eventAttributes.containsKey(EventAttributeName.batteryLevel.name))
+        assertEquals("Charging", eventAttributes[EventAttributeName.batteryState.name])
+        assertEquals(true.toString(), eventAttributes[EventAttributeName.lowPowerModeEnabled.name])
+    }
+
+    @Test
+    fun `onNetworkConnectionTypeChanged should publish networkConnectionTypeChanged event`() {
+
+        val slot = slot<SDKEvent>()
+        every { eventReporter.report(capture(slot)) } just Runs
+
+        testEventAnalyticsController.onNetworkConnectionTypeChanged(NetworkConnectionType.WIFI)
+
+        verify(exactly = 1) { eventReporter.report(any()) }
+
+        val capturedEvent = slot.captured
+        val capturedAttributes = capturedEvent.eventAttributes
+
+        assertEquals(capturedEvent.name, EventName.networkConnectionTypeChanged.name)
+        assertEquals(NetworkConnectionType.WIFI.description, capturedAttributes[EventAttributeName.networkConnectionType.name])
     }
 }

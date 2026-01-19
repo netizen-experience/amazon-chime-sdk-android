@@ -89,6 +89,11 @@ enum class EventAttributeName {
     meetingStartDurationMs,
 
     /**
+     * Duration of the meeting reconnect process
+     */
+    meetingReconnectDurationMs,
+
+    /**
      * Duration of the meeting
      */
     meetingDurationMs,
@@ -97,6 +102,21 @@ enum class EventAttributeName {
      * Error message of the meeting
      */
     meetingErrorMessage,
+
+    /**
+     * The application state
+     */
+    appState,
+
+    /**
+     * The current battery level
+     */
+    batteryLevel,
+
+    /**
+     * The current battery state
+     */
+    batteryState,
 
     /**
      * Meeting Status [MeetingSessionStatus]
@@ -116,7 +136,57 @@ enum class EventAttributeName {
     // Device Event Attributes - videoInputFailed
 
     /**
-     * The error of video input selection such as starting camera
+     * The error of audio input selection or access such as starting microphone
      */
-    videoInputError;
+    audioInputErrorMessage,
+
+    /**
+     * The error of video input selection or access such as starting camera
+     */
+    videoInputErrorMessage,
+
+    /**
+     * The error message that explains why the signaling websocket connection dropped
+     */
+    signalingDroppedErrorMessage,
+
+    /**
+     * The error message that explains why content share failed
+     */
+    contentShareErrorMessage,
+
+    /**
+     * The error message explaining why enabling or disabling Voice Focus failed
+     */
+    voiceFocusErrorMessage,
+
+    /**
+     * The selected audio device type
+     */
+    audioDeviceType,
+
+    /**
+     * The selected video device type
+     */
+    videoDeviceType,
+
+    /**
+     * Whether low power mode is currently enabled
+     */
+    lowPowerModeEnabled,
+
+    /**
+     * The network connection type
+     */
+    networkConnectionType,
+
+    /**
+     * The time taken for connection's ICE gathering state to complete
+     */
+    iceGatheringDurationMs,
+
+    /**
+     * The time taken for opening a WebSocket connection.
+     */
+    signalingOpenDurationMs;
 }

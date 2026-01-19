@@ -1998,6 +1998,11 @@ class MeetingFragment : Fragment(),
                     TAG,
                     "Meeting started on : ${audioVideo.getCommonEventAttributes().toJsonString()}"
                 )
+            EventName.meetingReconnected ->
+                logger.info(
+                    TAG,
+                    "Meeting reconnected on : ${audioVideo.getCommonEventAttributes().toJsonString()}"
+                )
             EventName.meetingEnded, EventName.meetingFailed -> {
                 logger.info(TAG, "Meeting history: ${gson.toJson(audioVideo.getMeetingHistory())}")
                 postLogger.publishLog(TAG)

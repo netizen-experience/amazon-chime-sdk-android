@@ -79,14 +79,26 @@ cameraCaptureSource.eventAnalyticsController = meetingSession.eventAnalyticsCont
 
 ## Meeting events and attributes
 Chime SDK sends these meeting events.
-|Event name            |Description
-|--                    |--
-|`meetingStartRequested` |The meeting will start.
-|`meetingStartSucceeded` |The meeting started.
-|`meetingStartFailed`    |The meeting failed to start.
-|`meetingEnded`          |The meeting ended.
-|`meetingFailed`         |The meeting ended with one of the following failure [MeetingSessionStatusCode](https://aws.github.io/amazon-chime-sdk-android/amazon-chime-sdk/com.amazonaws.services.chime.sdk.meetings.session/-meeting-session-status-code/index.html): <br><ul><li>`AudioJoinedFromAnotherDevice`</li><li>`AudioDisconnectAudio`</li><li>`AudioAuthenticationRejected`</li><li>`AudioCallAtCapacity`</li><li>`AudioCallEnded`</li><li>`AudioInternalServerError`</li><li>`AudioServiceUnavailable`</li><li>`AudioDisconnected`</li></ul>
-|`videoInputFailed`      |The camera selection failed.
+|Event name                         |Description
+|--                                 |--
+|`meetingStartRequested`            |The meeting will start.
+|`meetingStartSucceeded`            |The meeting started.
+|`meetingReconnected`               |The meeting reconnected.
+|`meetingStartFailed`               |The meeting failed to start.
+|`meetingEnded`                     |The meeting ended.
+|`meetingFailed`                    |The meeting ended with one of the following failure [MeetingSessionStatusCode](https://aws.github.io/amazon-chime-sdk-android/amazon-chime-sdk/com.amazonaws.services.chime.sdk.meetings.session/-meeting-session-status-code/index.html): <br><ul><li>`AudioJoinedFromAnotherDevice`</li><li>`AudioDisconnectAudio`</li><li>`AudioAuthenticationRejected`</li><li>`AudioCallAtCapacity`</li><li>`AudioCallEnded`</li><li>`AudioInternalServerError`</li><li>`AudioServiceUnavailable`</li><li>`AudioDisconnected`</li></ul>
+|`audioInputFailed`                 |The microphone selection or access failed.
+|`videoInputFailed`                 |The camera selection or access failed.
+|`videoClientSignalingOpened`       |The video client signaling websocket opened.
+|`videoClientSignalingDropped`      |The video client signaling websocket failed or closed with an error.
+|`videoClientIceGatheringCompleted` |The video client ICE candidate gathering has finished.
+|`contentShareStartRequested`       |The content share start was requested.
+|`contentShareStarted`              |The content share started successfully.
+|`contentShareStopped`              |The content share stopped.
+|`contentShareFailed`               |The content share failed.
+|`contentShareSignalingOpened`      |The content share signaling websocket opened.
+|`contentShareSignalingDropped`     |The content share client signaling websocket failed or closed with an error.
+|`contentShareIceGatheringCompleted`|The content share ICE candidate gathering has finished.
 
 ### Common attributes
 Chime SDK stores common attributes for event to identify the event.
@@ -122,19 +134,32 @@ Chime SDK sends a meeting event with attributes. These standard attributes are a
 The following table describes attributes for a meeting.
 |Attribute|Description|Included in
 |--|--|--
-|`maxVideoTileCount`|The maximum number of simultaneous video tiles shared during the meeting. This includes a local tile (your video), remote tiles, and content shares.<br><br>Unit: Count|`meetingStartSucceeded`, `meetingStartFailed`, `meetingEnded`, `meetingFailed`
-|`meetingDurationMs`|The time that elapsed between the beginning (`AudioVideoObserver.onAudioSessionStarted`) and the end (`AudioVideoObserver.onAudioSessionStopped`) of the meeting.<br><br>Unit: Milliseconds|`meetingStartSucceeded`, `meetingStartFailed`, `meetingEnded`, `meetingFailed`
+|`maxVideoTileCount`|The maximum number of simultaneous video tiles shared during the meeting. This includes a local tile (your video), remote tiles, and content shares.<br><br>Unit: Count|`meetingStartSucceeded`, `meetingReconnected`, `meetingStartFailed`, `meetingEnded`, `meetingFailed`
+|`meetingStartDurationMs`|The time that elapsed between the start request `meetingSession.audioVideo.start()` and the beginning of the meeting `AudioVideoObserver.audioSessionDidStart()`.<br><br>Unit: Milliseconds|`meetingStartSucceeded`,
+|`meetingDurationMs`|The time that elapsed between the beginning (`AudioVideoObserver.onAudioSessionStarted`) and the end (`AudioVideoObserver.onAudioSessionStopped`) of the meeting.<br><br>Unit: Milliseconds|`meetingStartSucceeded`, `meetingReconnected`, `meetingStartFailed`, `meetingEnded`, `meetingFailed`
+|`meetingReconnectDurationMs`|The time taken to reconnect the session after dropped.<br><br>Unit: Milliseconds|`meetingReconnected`
 |`meetingErrorMessage`|The error message that explains why the meeting has failed.| `meetingFailed`
 |`meetingStatus`|The meeting status when the meeting ended or failed. Note that this attribute indicates an enum name in [MeetingSessionStatusCode](https://aws.github.io/amazon-chime-sdk-android/amazon-chime-sdk/com.amazonaws.services.chime.sdk.meetings.session/-meeting-session-status-code/index.html), such as `Left` or `MeetingEnded`.|`meetingStartFailed`, `meetingEnded`, `meetingFailed`
-|`poorConnectionCount`|The number of times the significant packet loss occurred during the meeting. Per count, you receive `AudioVideoObserver.onConnectionBecamePoor`.<br><br>Unit: Count|`meetingStartSucceeded`, `meetingStartFailed`, `meetingEnded`, `meetingFailed`
-|`retryCount`|The number of connection retries performed during the meeting.<br><br>Unit: Count|`meetingStartSucceeded`, `meetingStartFailed`, `meetingEnded`, `meetingFailed`
+|`poorConnectionCount`|The number of times the significant packet loss occurred during the meeting. Per count, you receive `AudioVideoObserver.onConnectionBecamePoor`.<br><br>Unit: Count|`meetingStartSucceeded`, `meetingReconnected`, `meetingStartFailed`, `meetingEnded`, `meetingFailed`
+|`retryCount`|The number of connection retries performed during the meeting.<br><br>Unit: Count|`meetingStartSucceeded`, `meetingReconnected`, `meetingStartFailed`, `meetingEnded`, `meetingFailed`
+|`audioDeviceType`|The selected audio device type.|`audioInputSelected`
+|`videoDeviceType`|The selected video device type.|`videoDeviceType`
+|`contentShareErrorMessage`|The error message that explains why content share failed.|`contentShareFailed`
+|`signalingDroppedErrorMessage`|The error message that explains why the signaling websocket connection dropped.|`videoClientSignalingDropped`, `contentShareSignalingDropped`
+|`signalingOpenDurationMs`|The time that elapsed for the signaling websocket to open.<br><br>Unit: Milliseconds|`videoClientSignalingOpened`, `contentShareSignalingOpened`
+|`iceGatheringDurationMs`|The time that elapsed for ICE candidate gathering to complete.<br><br>Unit: Milliseconds|`videoClientIceGatheringCompleted`, `contentShareIceGatheringCompleted`
+|`appState`|The current app state when the event occurs. Possible states include: `Active`, `Inactive`, `Foreground`, and `Background`.| All events
+|`batteryLevel`|The current battery level when the event occurs.| All events
+|`batteryState`|The current battery state when the event occurs. Possible states include: `Charging`, `Discharging`, `NotCharging`, `Full`, and `Unknown`.| All events
+|`lowPowerModeEnabled`|Whether low power mode is currently enabled.| All events
+|`voiceFocusErrorMessage`|The error message explaining why enabling or disabling Voice Focus failed.| `voiceFocusEnableFailed`, `voiceFocusDisableFailed`
 
 ### Device attributes
-The following table describes attributes for the camera.
+The following table describes attributes for the microphone and camera.
 |Attribute|Description|Included in
 |--|--|--
-|`videoInputError`|The error message that explains why the camera selection failed.|`videoInputFailed`
-
+|`audioInputErrorMessage`|The error message that explains why the microphone selection or access failed.|`audioInputFailed`
+|`videoInputErrorMessage`|The error message that explains why the camera selection or access failed.|`videoInputFailed`
 ### The meeting history attribute
 The meeting history attribute is a list of states. Each state object contains the state name and timestamp.
 
@@ -167,15 +192,35 @@ the meeting history will include two `meetingStartSucceeded`.
 The following table lists available states.
 |State|Description
 |--|--
-|`audioInputSelected`|The microphone was selected.
-|`meetingEnded`|The meeting ended.
-|`meetingFailed`|The meeting ended with the failure status.
-|`meetingReconnected`|The meeting reconnected.
-|`meetingStartFailed`|The meeting failed to start.
-|`meetingStartRequested`|The meeting will start.
-|`meetingStartSucceeded`|The meeting started.
-|`videoInputFailed`|The camera selection failed.
-|`videoInputSelected`|The camera was selected.
+|`meetingEnded`                             |The meeting ended.
+|`meetingFailed`                            |The meeting ended with the failure status.
+|`meetingReconnected`                       |The meeting reconnected.
+|`meetingStartFailed`                       |The meeting failed to start.
+|`meetingStartRequested`                    |The meeting will start.
+|`meetingStartSucceeded`                    |The meeting started.
+|`audioInputSelected`                       |The microphone was selected.
+|`audioInputFailed`                         |The microphone selection or access failed.
+|`videoInputSelected`                       |The camera was selected.
+|`videoInputFailed`                         |The camera selection or access failed.
+|`videoClientSignalingOpened`               |The video client signaling websocket opened.
+|`videoClientSignalingDropped`              |The video client signaling websocket failed or closed with an error.
+|`videoClientIceGatheringCompleted`         |The video client ICE candidate gathering has finished.
+|`contentShareStartRequested`               |The content share start was requested.
+|`contentShareStarted`                      |The content share started successfully.
+|`contentShareStopped`                      |The content share stopped.
+|`contentShareFailed`                       |The content share failed.
+|`contentShareSignalingOpened`              |The content share signaling websocket opened.
+|`contentShareSignalingDropped`             |The content share client signaling websocket failed or closed with an error.
+|`contentShareIceGatheringCompleted`        |The content share ICE candidate gathering has finished.
+|`appStateChanged`                          |The application state is changed.
+|`appMemoryLow`                             |The application memory is low.
+|`voiceFocusEnabled`                        |The voice focus is enabled.
+|`voiceFocusDisabled`                       |The voice focus is disabled.
+|`voiceFocusEnableFailed`                   |Failed to enable voice focus.
+|`voiceFocusDisableFailed`                  |Failed to disable voice focus.
+|`videoCaptureSessionInterruptionBegan`     |Video capture session interruption began.
+|`videoCaptureSessionInterruptionEnded`     |Video capture session interruption ended.
+|`networkConnectionTypeChanged`             |Network connection type is changed.
 
 ## Example
 
