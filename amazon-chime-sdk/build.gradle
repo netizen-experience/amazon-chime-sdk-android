@@ -79,6 +79,9 @@ android {
         jvmTarget = '17'
     }
     namespace 'com.amazonaws.services.chime.sdk'
+    buildFeatures {
+        buildConfig true
+    }
 
     defaultConfig {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
