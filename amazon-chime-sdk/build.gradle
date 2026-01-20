@@ -30,6 +30,9 @@ android {
         consumerProguardFiles 'consumer-rules.pro'
         renderscriptTargetApi 21
         renderscriptSupportModeEnabled true
+
+        versionCode generateVersionCode()
+        versionName generateVersionName()
     }
 
     kotlinOptions {
