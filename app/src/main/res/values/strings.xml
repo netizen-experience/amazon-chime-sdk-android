@@ -5,7 +5,7 @@
 
 <resources>
     <string name="app_name">Netizen Labs</string>
-    <string name="edit_meeting_id">Meeting ID</string>
+    <string name="join_meeting_url">Enter Invitation Link</string>
     <string name="edit_name">User ID</string>
     <string name="main_title">Join a meeting</string>
     <string name="audio_mode_spinner">Audio Mode</string>
@@ -54,7 +54,7 @@
     <string name="video_preview_title">Video Preview</string>
     <string name="video_preview_view">Video Preview View</string>
     <string name="meeting_join">Join</string>
-    <string name="preview_meeting_info">Ready to join meeting %1$s as %2$s.</string>
+    <string name="preview_meeting_info">Ready to join meeting.</string>
 
     <!-- live transcription controller -->
     <string name="live_transcription_configuration_title">Live Transcription Configuration</string>
@@ -118,8 +118,7 @@
     <string name="screen_capture_notification_text">Your screen is being shared.</string>
 
     <!-- Notify users for errors -->
-    <string name="user_notification_meeting_id_invalid">Meeting ID is invalid</string>
-    <string name="user_notification_attendee_name_invalid">Attendee name is invalid</string>
+    <string name="user_notification_meeting_url_invalid">Meeting URL is invalid</string>
     <string name="user_notification_permission_error">WebRTC cannot work without permissions</string>
     <string name="user_notification_screen_share_permission_error">Screen share cannot work without permissions</string>
     <string name="user_notification_flashlight_unavailable_error">Flashlight not available on current device</string>
@@ -135,4 +134,5 @@
     <string name="enter_message">Enter message</string>
     <string name="send_message">Send Message</string>
     <string name="tab_layout">Tab Layout</string>
+    <string name="text_view_meeting_header">Meeting is in session</string>
 </resources>

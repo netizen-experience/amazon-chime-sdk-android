@@ -102,7 +102,6 @@ import com.amazonaws.services.chime.sdk.meetings.utils.logger.LogLevel
 import com.amazonaws.services.chime.sdkdemo.R
 import com.amazonaws.services.chime.sdkdemo.activity.HomeActivity
 import com.amazonaws.services.chime.sdkdemo.activity.MeetingActivity
-import com.amazonaws.services.chime.sdkdemo.activity.TranscriptionConfigActivity
 import com.amazonaws.services.chime.sdkdemo.adapter.CaptionAdapter
 import com.amazonaws.services.chime.sdkdemo.adapter.DeviceAdapter
 import com.amazonaws.services.chime.sdkdemo.adapter.MessageAdapter
@@ -226,14 +225,12 @@ class MeetingFragment : Fragment(),
 
     companion object {
         fun newInstance(
-            meetingId: String,
             audioVideoConfig: AudioVideoConfiguration,
             meetingEndpointUrl: String
         ): MeetingFragment {
             val fragment = MeetingFragment()
 
             fragment.arguments = bundleOf(
-                HomeActivity.MEETING_ID_KEY to meetingId,
                 HomeActivity.AUDIO_MODE_KEY to audioVideoConfig.audioMode.value,
                 HomeActivity.AUDIO_DEVICE_CAPABILITIES_KEY to audioVideoConfig.audioDeviceCapabilities,
                 HomeActivity.MEETING_ENDPOINT_KEY to meetingEndpointUrl,
@@ -292,9 +289,6 @@ class MeetingFragment : Fragment(),
             activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         powerManager = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
 
-        view.findViewById<TextView>(R.id.textViewMeetingId)?.text = arguments?.getString(
-            HomeActivity.MEETING_ID_KEY
-        ) as String
         setupButtonsBar(view)
         setupSubViews(view)
         setupTab(view)
@@ -645,44 +639,44 @@ class MeetingFragment : Fragment(),
             }
             return
         }
-        val isVoiceFocusEnabled = audioVideo.realtimeIsVoiceFocusEnabled()
         val additionalToggles = mutableListOf(
             context?.getString(if (meetingModel.isSharingContent) R.string.disable_screen_capture_source else R.string.enable_screen_capture_source)
         )
-        // val additionalToggles = mutableListOf(
-        //     context?.getString(if (meetingModel.isSharingContent) R.string.disable_screen_capture_source else R.string.enable_screen_capture_source),
-        //     context?.getString(if (isVoiceFocusEnabled) R.string.disable_voice_focus else R.string.enable_voice_focus),
-        //     context?.getString(if (cameraCaptureSource.torchEnabled) R.string.disable_flashlight else R.string.enable_flashlight),
-        //     context?.getString(if (meetingModel.isUsingCpuVideoProcessor) R.string.disable_cpu_filter else R.string.enable_cpu_filter),
-        //     context?.getString(if (meetingModel.isUsingGpuVideoProcessor) R.string.disable_gpu_filter else R.string.enable_gpu_filter),
-        //     context?.getString(if (meetingModel.isUsingCameraCaptureSource) R.string.disable_custom_capture_source else R.string.enable_custom_capture_source),
-        //     context?.getString(R.string.video_configuration)
-        // )
-        // if (inReplicaMeeting()) {
-        //     additionalToggles.add(context?.getString(R.string.demote_from_primary_meeting))
-        // } else {
-        //     additionalToggles.add(context?.getString(if (meetingModel.isLiveTranscriptionEnabled) R.string.disable_live_transcription else R.string.enable_live_transcription))
-        // }
+//        val isVoiceFocusEnabled = audioVideo.realtimeIsVoiceFocusEnabled()
+//         val additionalToggles = mutableListOf(
+//             context?.getString(if (meetingModel.isSharingContent) R.string.disable_screen_capture_source else R.string.enable_screen_capture_source),
+//             context?.getString(if (isVoiceFocusEnabled) R.string.disable_voice_focus else R.string.enable_voice_focus),
+//             context?.getString(if (cameraCaptureSource.torchEnabled) R.string.disable_flashlight else R.string.enable_flashlight),
+//             context?.getString(if (meetingModel.isUsingCpuVideoProcessor) R.string.disable_cpu_filter else R.string.enable_cpu_filter),
+//             context?.getString(if (meetingModel.isUsingGpuVideoProcessor) R.string.disable_gpu_filter else R.string.enable_gpu_filter),
+//             context?.getString(if (meetingModel.isUsingCameraCaptureSource) R.string.disable_custom_capture_source else R.string.enable_custom_capture_source),
+//             context?.getString(R.string.video_configuration)
+//         )
+//         if (inReplicaMeeting()) {
+//             additionalToggles.add(context?.getString(R.string.demote_from_primary_meeting))
+//         } else {
+//             additionalToggles.add(context?.getString(if (meetingModel.isLiveTranscriptionEnabled) R.string.disable_live_transcription else R.string.enable_live_transcription))
+//         }
 
         additionalOptionsAlertDialogBuilder.setItems(additionalToggles.toTypedArray()) { _, which ->
             when (which) {
                 0 -> toggleScreenCapture()
-                1 -> setVoiceFocusEnabled(!isVoiceFocusEnabled)
-                2 -> toggleFlashlight()
-                3 -> toggleCpuDemoFilter()
-                4 -> toggleGpuDemoFilter()
-                5 -> toggleCustomCaptureSource()
-                6 -> presentVideoConfigDialog()
-                7 -> { // May not be accessible
-                    if (inReplicaMeeting()) {
-                        demoteFromPrimaryMeeting()
-                    } else {
-                        toggleLiveTranscription(
-                            arguments?.getString(HomeActivity.MEETING_ID_KEY) as String,
-                            arguments?.getString(HomeActivity.MEETING_ENDPOINT_KEY) as String
-                        )
-                    }
-                }
+//                1 -> setVoiceFocusEnabled(!isVoiceFocusEnabled)
+//                2 -> toggleFlashlight()
+//                3 -> toggleCpuDemoFilter()
+//                4 -> toggleGpuDemoFilter()
+//                5 -> toggleCustomCaptureSource()
+//                6 -> presentVideoConfigDialog()
+//                7 -> { // May not be accessible
+//                    if (inReplicaMeeting()) {
+//                        demoteFromPrimaryMeeting()
+//                    } else {
+//                        toggleLiveTranscription(
+//                            arguments?.getString(HomeActivity.MEETING_ID_KEY) as String,
+//                            arguments?.getString(HomeActivity.MEETING_ENDPOINT_KEY) as String
+//                        )
+//                    }
+//                }
             }
         }
     }
@@ -1014,25 +1008,25 @@ class MeetingFragment : Fragment(),
         }
     }
 
-    private fun toggleLiveTranscription(meetingId: String, meetingEndpointUrl: String) {
-        if (meetingModel.isLiveTranscriptionEnabled) {
-            uiScope.launch {
-                val transcriptionResponseJson: String? =
-                    disableMeetingTranscription(meetingId, meetingEndpointUrl)
-
-                if (transcriptionResponseJson == null) {
-                    notifyHandler(getString(R.string.user_notification_transcription_stop_error))
-                } else {
-                    notifyHandler(getString(R.string.user_notification_transcription_stop_success))
-                }
-            }
-        } else {
-            val intent = Intent(context, TranscriptionConfigActivity::class.java)
-            intent.putExtra(HomeActivity.MEETING_ID_KEY, meetingId)
-            intent.putExtra(HomeActivity.MEETING_ENDPOINT_KEY, meetingEndpointUrl)
-            startActivity(intent)
-        }
-    }
+//    private fun toggleLiveTranscription(meetingId: String, meetingEndpointUrl: String) {
+//        if (meetingModel.isLiveTranscriptionEnabled) {
+//            uiScope.launch {
+//                val transcriptionResponseJson: String? =
+//                    disableMeetingTranscription(meetingId, meetingEndpointUrl)
+//
+//                if (transcriptionResponseJson == null) {
+//                    notifyHandler(getString(R.string.user_notification_transcription_stop_error))
+//                } else {
+//                    notifyHandler(getString(R.string.user_notification_transcription_stop_success))
+//                }
+//            }
+//        } else {
+//            val intent = Intent(context, TranscriptionConfigActivity::class.java)
+//            intent.putExtra(HomeActivity.MEETING_ID_KEY, meetingId)
+//            intent.putExtra(HomeActivity.MEETING_ENDPOINT_KEY, meetingEndpointUrl)
+//            startActivity(intent)
+//        }
+//    }
 
     private fun toggleVideo() {
         if (meetingModel.isCameraOn) {

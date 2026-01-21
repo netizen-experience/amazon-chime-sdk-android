@@ -34,10 +34,10 @@
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".activity.MeetingActivity"
             android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".activity.TranscriptionConfigActivity"
-            android:parentActivityName=".activity.MeetingActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:windowSoftInputMode="adjustResize" />
+<!--        <activity android:name=".activity.TranscriptionConfigActivity"-->
+<!--            android:parentActivityName=".activity.MeetingActivity"-->
+<!--            android:configChanges="orientation|screenSize|keyboardHidden"-->
+<!--            android:windowSoftInputMode="adjustResize" />-->
         <service android:name=".service.MicrophoneService"
             android:enabled="true"
             android:foregroundServiceType="microphone"

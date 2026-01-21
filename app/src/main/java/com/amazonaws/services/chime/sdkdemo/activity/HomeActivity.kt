@@ -36,6 +36,7 @@ import com.amazonaws.services.chime.sdkdemo.model.DebugSettingsViewModel
 import com.amazonaws.services.chime.sdkdemo.utils.encodeURLParam
 import com.amazonaws.services.chime.sdkdemo.utils.showToast
 import java.net.URL
+import kotlin.text.split
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,20 +45,17 @@ class HomeActivity : AppCompatActivity() {
     private val logger = ConsoleLogger(LogLevel.INFO)
     private val uiScope = CoroutineScope(Dispatchers.Main)
 
-    private val MEETING_REGION = "us-east-1"
     private val TAG = "MeetingHomeActivity"
     private val WEBRTC_PERMISSION_REQUEST_CODE = 1
 
-    private var meetingEditText: EditText? = null
-    private var nameEditText: EditText? = null
+    private var meetingUrlText: EditText? = null
+    private var sessionId: String? = null
+    private var userId: String? = null
     private var audioMode: AppCompatSpinner? = null
     private var audioDeviceCapabilitiesSpinner: AppCompatSpinner? = null
     private var audioRedundancySwitch: SwitchCompat? = null
     private var reconnectTimeoutSpinner: AppCompatSpinner? = null
     private var authenticationProgressBar: ProgressBar? = null
-    private var meetingID: String? = null
-    private var yourName: String? = null
-    private var testUrl: String = ""
     private var audioModes = listOf("Stereo/48KHz Audio", "Mono/48KHz Audio", "Mono/16KHz Audio")
     private var audioDeviceCapabilitiesOptions = listOf("Input and Output", "None", "Output Only")
     private var reconnectTimeoutOptions = listOf(180000, 20000, 5000, 0)
@@ -66,8 +64,6 @@ class HomeActivity : AppCompatActivity() {
 
     companion object {
         const val MEETING_RESPONSE_KEY = "MEETING_RESPONSE"
-        const val MEETING_ID_KEY = "MEETING_ID"
-        const val NAME_KEY = "NAME"
         const val MEETING_ENDPOINT_KEY = "MEETING_ENDPOINT_URL"
         const val AUDIO_MODE_KEY = "AUDIO_MODE"
         const val AUDIO_DEVICE_CAPABILITIES_KEY = "AUDIO_DEVICE_CAPABILITIES"
@@ -81,8 +77,7 @@ class HomeActivity : AppCompatActivity() {
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
 
-        meetingEditText = findViewById(R.id.editMeetingId)
-        nameEditText = findViewById(R.id.editName)
+        meetingUrlText = findViewById(R.id.joinMeetingUrl)
         audioMode = findViewById(R.id.audioModeSpinner)
         audioDeviceCapabilitiesSpinner = findViewById(R.id.audioDeviceCapabilitiesSpinner)
         audioRedundancySwitch = findViewById(R.id.audioRedundancySwitch)
@@ -129,22 +124,31 @@ class HomeActivity : AppCompatActivity() {
         val redundancyEnabled = audioRedundancySwitch?.isChecked as Boolean
         audioVideoConfig = AudioVideoConfiguration(audioMode = mode, audioDeviceCapabilities = audioDeviceCapabilities, enableAudioRedundancy = redundancyEnabled, reconnectTimeoutMs = reconnectTimeoutMs)
 
-        meetingID = meetingEditText?.text.toString().trim().replace("\\s+".toRegex(), "+")
-        yourName = nameEditText?.text.toString().trim().replace("\\s+".toRegex(), "+")
-        testUrl = getTestUrl()
-
-        if (meetingID.isNullOrBlank()) {
-            showToast(getString(R.string.user_notification_meeting_id_invalid))
-        } else if (yourName.isNullOrBlank()) {
-            showToast(getString(R.string.user_notification_attendee_name_invalid))
-        } else {
-            if (hasPermissionsAlready()) {
-                authenticate(testUrl, meetingID, yourName)
-            } else {
-                val permissions = audioVideoConfig.audioDeviceCapabilities.requiredPermissions() + arrayOf(Manifest.permission.CAMERA)
-                ActivityCompat.requestPermissions(this, permissions, WEBRTC_PERMISSION_REQUEST_CODE)
-            }
+        if (!hasPermissionsAlready()) {
+            val permissions = audioVideoConfig.audioDeviceCapabilities.requiredPermissions() + arrayOf(Manifest.permission.CAMERA)
+            ActivityCompat.requestPermissions(this, permissions, WEBRTC_PERMISSION_REQUEST_CODE)
+            return
         }
+
+        val meetingUrlInput = meetingUrlText?.text.toString().trim().replace("\\s+".toRegex(), "+")
+        if (meetingUrlInput.isBlank()) {
+            showToast(getString(R.string.user_notification_meeting_url_invalid))
+            return
+        }
+
+        // https://asd.com/login?token=[userSessionToken]&id=[userId]&redirect=/meeting/[projectId]-[sessionId]
+        val meetingUrl = URL(meetingUrlInput)
+        val queryParams = meetingUrl.query?.split('&')?.associate {
+            val parts = it.split('=')
+            parts[0] to parts.getOrElse(1) { "" }
+        }
+
+        val redirectPath = queryParams?.get("redirect")
+        val lastSlug = redirectPath?.split("/")?.last()
+        sessionId = lastSlug?.split("-")?.last()
+        userId = queryParams?.get("id")
+
+        authenticate(sessionId, userId)
     }
 
     private fun getTestUrl(): String {
@@ -174,62 +178,58 @@ class HomeActivity : AppCompatActivity() {
                     showToast(getString(R.string.user_notification_permission_error))
                     return
                 }
-                authenticate(testUrl, meetingID, yourName)
+                authenticate(sessionId, userId)
             }
         }
     }
 
     private fun authenticate(
-        meetingUrl: String,
-        meetingId: String?,
-        attendeeName: String?
+        sessionId: String?,
+        userId: String?
     ) =
         uiScope.launch {
             logger.info(
                 TAG,
-                "Joining meeting. meetingUrl: $meetingUrl, meetingId: $meetingId, attendeeName: $attendeeName"
+                "Joining meeting. sessionId: $sessionId, userId: $userId"
             )
-            if (!meetingUrl.startsWith("http")) {
-                showToast(getString(R.string.user_notification_meeting_url_error))
+
+        if (sessionId.isNullOrBlank() || userId.isNullOrBlank()) {
+            showToast(getString(R.string.user_notification_meeting_url_invalid))
+        } else {
+            authenticationProgressBar?.visibility = View.VISIBLE
+
+            val primaryMeetingId = debugSettingsViewModel.primaryMeetingId.value
+            val meetingResponseJson: String? = joinMeeting(sessionId, userId, primaryMeetingId)
+
+            authenticationProgressBar?.visibility = View.INVISIBLE
+
+            if (meetingResponseJson == null) {
+                showToast(getString(R.string.user_notification_meeting_start_error))
             } else {
-                authenticationProgressBar?.visibility = View.VISIBLE
-
-                val primaryMeetingId = debugSettingsViewModel.primaryMeetingId.value
-                val meetingResponseJson: String? = joinMeeting(meetingUrl, meetingId, attendeeName, primaryMeetingId)
-
-                authenticationProgressBar?.visibility = View.INVISIBLE
-
-                if (meetingResponseJson == null) {
-                    showToast(getString(R.string.user_notification_meeting_start_error))
-                } else {
-                    val intent = Intent(applicationContext, MeetingActivity::class.java).apply {
-                        putExtras(
-                            bundleOf(
-                                MEETING_RESPONSE_KEY to meetingResponseJson,
-                                MEETING_ID_KEY to meetingId,
-                                NAME_KEY to attendeeName,
-                                MEETING_ENDPOINT_KEY to meetingUrl,
-                                AUDIO_MODE_KEY to audioVideoConfig.audioMode.value,
-                                AUDIO_DEVICE_CAPABILITIES_KEY to audioVideoConfig.audioDeviceCapabilities,
-                                ENABLE_AUDIO_REDUNDANCY_KEY to audioVideoConfig.enableAudioRedundancy,
-                                RECONNECT_TIMEOUT_MS to audioVideoConfig.reconnectTimeoutMs
-                            )
+                val intent = Intent(applicationContext, MeetingActivity::class.java).apply {
+                    putExtras(
+                        bundleOf(
+                            MEETING_RESPONSE_KEY to meetingResponseJson,
+                            AUDIO_MODE_KEY to audioVideoConfig.audioMode.value,
+                            AUDIO_DEVICE_CAPABILITIES_KEY to audioVideoConfig.audioDeviceCapabilities,
+                            ENABLE_AUDIO_REDUNDANCY_KEY to audioVideoConfig.enableAudioRedundancy,
+                            RECONNECT_TIMEOUT_MS to audioVideoConfig.reconnectTimeoutMs
                         )
-                    }
-                    startActivity(intent)
+                    )
                 }
+                startActivity(intent)
+            }
             }
         }
 
     private suspend fun joinMeeting(
-        meetingUrl: String,
-        meetingId: String?,
-        attendeeName: String?,
+        sessionId: String,
+        userId: String,
         primaryMeetingId: String?
     ): String? {
-        val meetingServerUrl = if (meetingUrl.endsWith("/")) meetingUrl else "$meetingUrl/"
-        var url = "${meetingServerUrl}join?title=${encodeURLParam(meetingId)}&name=${encodeURLParam(
-            attendeeName)}&region=${encodeURLParam(MEETING_REGION)}"
+        val serverUrl = getTestUrl()
+        val meetingServerUrl = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
+        var url = "${meetingServerUrl}join?sessionId=${encodeURLParam(sessionId)}&userId=${encodeURLParam(userId)}"
         if (!primaryMeetingId.isNullOrEmpty()) {
             url += "&primaryExternalMeetingId=${encodeURLParam(primaryMeetingId)}"
         }
