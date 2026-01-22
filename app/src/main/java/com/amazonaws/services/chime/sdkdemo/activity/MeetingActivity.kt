@@ -240,7 +240,7 @@ class MeetingActivity : AppCompatActivity(),
             val mediaPlacement: MediaPlacement = meetingResp.MediaPlacement
             val mediaRegion: String = meetingResp.MediaRegion
             val meetingId: String = meetingResp.MeetingId
-            val meetingFeatures: MeetingFeatures = MeetingFeatures(meetingResp.MeetingFeatures?.Video?.MaxResolution, meetingResp.MeetingFeatures?.Content?.MaxResolution)
+            val meetingFeatures = MeetingFeatures(meetingResp.MeetingFeatures?.Video?.MaxResolution, meetingResp.MeetingFeatures?.Content?.MaxResolution)
             val meeting =
                 Meeting(
                     externalMeetingId,
