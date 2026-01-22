@@ -136,7 +136,6 @@ class HomeActivity : AppCompatActivity() {
             return
         }
 
-        // https://asd.com/login?token=[userSessionToken]&id=[userId]&redirect=/meeting/[projectId]-[sessionId]
         val meetingUrl = URL(meetingUrlInput)
         val queryParams = meetingUrl.query?.split('&')?.associate {
             val parts = it.split('=')
@@ -151,9 +150,10 @@ class HomeActivity : AppCompatActivity() {
         authenticate(sessionId, userId)
     }
 
-    private fun getTestUrl(): String {
+    private fun getServerUrl(): String {
         val endpointUrl = debugSettingsViewModel.endpointUrl.value
-        return if (endpointUrl.isNullOrEmpty()) getString(R.string.test_url) else endpointUrl
+        val serverUrl = if (endpointUrl.isNullOrEmpty()) getString(R.string.server_url) else endpointUrl
+        return if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
     }
 
     private fun hasPermissionsAlready(): Boolean {
@@ -198,7 +198,7 @@ class HomeActivity : AppCompatActivity() {
         } else {
             authenticationProgressBar?.visibility = View.VISIBLE
 
-            val serverUrl = getTestUrl()
+            val serverUrl = getServerUrl()
             val primaryMeetingId = debugSettingsViewModel.primaryMeetingId.value
             val meetingResponseJson: String? = joinMeeting(serverUrl, sessionId, userId, primaryMeetingId)
 
@@ -230,8 +230,7 @@ class HomeActivity : AppCompatActivity() {
         userId: String,
         primaryMeetingId: String?
     ): String? {
-        val meetingServerUrl = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
-        var url = "${meetingServerUrl}join?sessionId=${encodeURLParam(sessionId)}&userId=${encodeURLParam(userId)}"
+        var url = "${serverUrl}join?sessionId=${encodeURLParam(sessionId)}&userId=${encodeURLParam(userId)}"
         if (!primaryMeetingId.isNullOrEmpty()) {
             url += "&primaryExternalMeetingId=${encodeURLParam(primaryMeetingId)}"
         }

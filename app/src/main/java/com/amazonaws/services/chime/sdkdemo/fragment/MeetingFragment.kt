@@ -695,10 +695,8 @@ class MeetingFragment : Fragment(),
 
     private suspend fun getJoinResponseForPrimaryMeeting(): MeetingSessionCredentials? {
         val meetingEndpointUrl = arguments?.getString(HomeActivity.MEETING_ENDPOINT_KEY) as String
-        var url =
-            if (meetingEndpointUrl.endsWith("/")) meetingEndpointUrl else "$meetingEndpointUrl/"
         val attendeeName = getAttendeeName(credentials.attendeeId, credentials.externalUserId)
-        url = "${url}join?title=${encodeURLParam(primaryExternalMeetingId)}&name=promoted-${
+        var url = "${meetingEndpointUrl}join?title=${encodeURLParam(primaryExternalMeetingId)}&name=promoted-${
             encodeURLParam(attendeeName)
         }"
         url += "&region=region"
