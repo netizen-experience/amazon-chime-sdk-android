@@ -9,7 +9,6 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
@@ -20,7 +19,6 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
-import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -1045,105 +1043,105 @@ class MeetingFragment : Fragment(),
         meetingModel.isAdditionalOptionsDialogOn = true
     }
 
-    private fun toggleFlashlight() {
-        logger.info(
-            TAG,
-            "Toggling flashlight from ${cameraCaptureSource.torchEnabled} to ${!cameraCaptureSource.torchEnabled}"
-        )
-        if (!meetingModel.isUsingCameraCaptureSource) {
-            logger.warn(TAG, "Cannot toggle flashlight without using custom camera capture source")
-            Toast.makeText(
-                context,
-                getString(R.string.user_notification_flashlight_custom_source_error),
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-        val desiredFlashlightEnabled = !cameraCaptureSource.torchEnabled
-        cameraCaptureSource.torchEnabled = desiredFlashlightEnabled
-        if (cameraCaptureSource.torchEnabled != desiredFlashlightEnabled) {
-            logger.warn(TAG, "Flashlight failed to toggle")
-            Toast.makeText(
-                context,
-                getString(R.string.user_notification_flashlight_unavailable_error),
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-    }
+//    private fun toggleFlashlight() {
+//        logger.info(
+//            TAG,
+//            "Toggling flashlight from ${cameraCaptureSource.torchEnabled} to ${!cameraCaptureSource.torchEnabled}"
+//        )
+//        if (!meetingModel.isUsingCameraCaptureSource) {
+//            logger.warn(TAG, "Cannot toggle flashlight without using custom camera capture source")
+//            Toast.makeText(
+//                context,
+//                getString(R.string.user_notification_flashlight_custom_source_error),
+//                Toast.LENGTH_SHORT
+//            ).show()
+//            return
+//        }
+//        val desiredFlashlightEnabled = !cameraCaptureSource.torchEnabled
+//        cameraCaptureSource.torchEnabled = desiredFlashlightEnabled
+//        if (cameraCaptureSource.torchEnabled != desiredFlashlightEnabled) {
+//            logger.warn(TAG, "Flashlight failed to toggle")
+//            Toast.makeText(
+//                context,
+//                getString(R.string.user_notification_flashlight_unavailable_error),
+//                Toast.LENGTH_SHORT
+//            ).show()
+//            return
+//        }
+//    }
 
-    private fun toggleCpuDemoFilter() {
-        if (!meetingModel.isUsingCameraCaptureSource) {
-            logger.warn(TAG, "Cannot toggle filter without using custom camera capture source")
-            Toast.makeText(
-                context,
-                getString(R.string.user_notification_filter_custom_source_error),
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-        if (meetingModel.isUsingGpuVideoProcessor || meetingModel.isUsingBackgroundBlur || meetingModel.isUsingBackgroundReplacement) {
-            logger.warn(TAG, "Cannot toggle filter when other filter is enabled")
-            Toast.makeText(
-                context,
-                getString(R.string.user_notification_filter_both_enabled_error),
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-        logger.info(
-            TAG,
-            "Toggling CPU demo filter from $meetingModel.isUsingCpuVideoProcessor to ${!meetingModel.isUsingCpuVideoProcessor}"
-        )
-        meetingModel.isUsingCpuVideoProcessor = !meetingModel.isUsingCpuVideoProcessor
-        if (meetingModel.isLocalVideoStarted) {
-            startLocalVideo()
-        }
-    }
-
-    private fun toggleGpuDemoFilter() {
-        if (!meetingModel.isUsingCameraCaptureSource) {
-            logger.warn(TAG, "Cannot toggle filter without using custom camera capture source")
-            Toast.makeText(
-                context,
-                getString(R.string.user_notification_filter_custom_source_error),
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-        if (meetingModel.isUsingCpuVideoProcessor || meetingModel.isUsingBackgroundBlur || meetingModel.isUsingBackgroundReplacement) {
-            logger.warn(TAG, "Cannot toggle filter when other filter is enabled")
-            Toast.makeText(
-                context,
-                getString(R.string.user_notification_filter_both_enabled_error),
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-        logger.info(
-            TAG,
-            "Toggling GPU demo filter from $meetingModel.isUsingGpuVideoProcessor to ${!meetingModel.isUsingGpuVideoProcessor}"
-        )
-        meetingModel.isUsingGpuVideoProcessor = !meetingModel.isUsingGpuVideoProcessor
-        if (meetingModel.isLocalVideoStarted) {
-            startLocalVideo()
-        }
-    }
-
-    private fun toggleCustomCaptureSource() {
-        logger.info(
-            TAG,
-            "Toggling using custom camera source from $meetingModel.isUsingCameraCaptureSource to ${!meetingModel.isUsingCameraCaptureSource}"
-        )
-        val wasUsingCameraCaptureSource = meetingModel.isUsingCameraCaptureSource
-        meetingModel.isUsingCameraCaptureSource = !meetingModel.isUsingCameraCaptureSource
-        if (meetingModel.isLocalVideoStarted) {
-            if (wasUsingCameraCaptureSource) {
-                cameraCaptureSource.stop()
-            }
-            startLocalVideo()
-        }
-    }
+//    private fun toggleCpuDemoFilter() {
+//        if (!meetingModel.isUsingCameraCaptureSource) {
+//            logger.warn(TAG, "Cannot toggle filter without using custom camera capture source")
+//            Toast.makeText(
+//                context,
+//                getString(R.string.user_notification_filter_custom_source_error),
+//                Toast.LENGTH_SHORT
+//            ).show()
+//            return
+//        }
+//        if (meetingModel.isUsingGpuVideoProcessor || meetingModel.isUsingBackgroundBlur || meetingModel.isUsingBackgroundReplacement) {
+//            logger.warn(TAG, "Cannot toggle filter when other filter is enabled")
+//            Toast.makeText(
+//                context,
+//                getString(R.string.user_notification_filter_both_enabled_error),
+//                Toast.LENGTH_SHORT
+//            ).show()
+//            return
+//        }
+//        logger.info(
+//            TAG,
+//            "Toggling CPU demo filter from $meetingModel.isUsingCpuVideoProcessor to ${!meetingModel.isUsingCpuVideoProcessor}"
+//        )
+//        meetingModel.isUsingCpuVideoProcessor = !meetingModel.isUsingCpuVideoProcessor
+//        if (meetingModel.isLocalVideoStarted) {
+//            startLocalVideo()
+//        }
+//    }
+//
+//    private fun toggleGpuDemoFilter() {
+//        if (!meetingModel.isUsingCameraCaptureSource) {
+//            logger.warn(TAG, "Cannot toggle filter without using custom camera capture source")
+//            Toast.makeText(
+//                context,
+//                getString(R.string.user_notification_filter_custom_source_error),
+//                Toast.LENGTH_SHORT
+//            ).show()
+//            return
+//        }
+//        if (meetingModel.isUsingCpuVideoProcessor || meetingModel.isUsingBackgroundBlur || meetingModel.isUsingBackgroundReplacement) {
+//            logger.warn(TAG, "Cannot toggle filter when other filter is enabled")
+//            Toast.makeText(
+//                context,
+//                getString(R.string.user_notification_filter_both_enabled_error),
+//                Toast.LENGTH_SHORT
+//            ).show()
+//            return
+//        }
+//        logger.info(
+//            TAG,
+//            "Toggling GPU demo filter from $meetingModel.isUsingGpuVideoProcessor to ${!meetingModel.isUsingGpuVideoProcessor}"
+//        )
+//        meetingModel.isUsingGpuVideoProcessor = !meetingModel.isUsingGpuVideoProcessor
+//        if (meetingModel.isLocalVideoStarted) {
+//            startLocalVideo()
+//        }
+//    }
+//
+//    private fun toggleCustomCaptureSource() {
+//        logger.info(
+//            TAG,
+//            "Toggling using custom camera source from $meetingModel.isUsingCameraCaptureSource to ${!meetingModel.isUsingCameraCaptureSource}"
+//        )
+//        val wasUsingCameraCaptureSource = meetingModel.isUsingCameraCaptureSource
+//        meetingModel.isUsingCameraCaptureSource = !meetingModel.isUsingCameraCaptureSource
+//        if (meetingModel.isLocalVideoStarted) {
+//            if (wasUsingCameraCaptureSource) {
+//                cameraCaptureSource.stop()
+//            }
+//            startLocalVideo()
+//        }
+//    }
 
     private fun toggleScreenCapture() {
         if (meetingModel.isSharingContent) {
@@ -1158,24 +1156,24 @@ class MeetingFragment : Fragment(),
         }
     }
 
-    private fun presentVideoConfigDialog() {
-        val videoConfigDialogBuilder = AlertDialog.Builder(activity)
-        videoConfigDialogBuilder.setTitle(R.string.video_configuration)
-
-        val maxBitRateInput = EditText(activity)
-        maxBitRateInput.setHint(getString(R.string.video_max_bit_rate_hint))
-        maxBitRateInput.inputType = InputType.TYPE_CLASS_NUMBER
-
-        videoConfigDialogBuilder.setView(maxBitRateInput)
-        videoConfigDialogBuilder.setPositiveButton("Done", DialogInterface.OnClickListener { dialog, which ->
-            meetingModel.localVideoMaxBitRateKbps = maxBitRateInput.text.toString().toIntOrNull() ?: 0
-            // If local video is started, restart
-            if (meetingModel.isLocalVideoStarted) {
-                startLocalVideo()
-            }
-        })
-        videoConfigDialogBuilder.show()
-    }
+//    private fun presentVideoConfigDialog() {
+//        val videoConfigDialogBuilder = AlertDialog.Builder(activity)
+//        videoConfigDialogBuilder.setTitle(R.string.video_configuration)
+//
+//        val maxBitRateInput = EditText(activity)
+//        maxBitRateInput.setHint(getString(R.string.video_max_bit_rate_hint))
+//        maxBitRateInput.inputType = InputType.TYPE_CLASS_NUMBER
+//
+//        videoConfigDialogBuilder.setView(maxBitRateInput)
+//        videoConfigDialogBuilder.setPositiveButton("Done", DialogInterface.OnClickListener { dialog, which ->
+//            meetingModel.localVideoMaxBitRateKbps = maxBitRateInput.text.toString().toIntOrNull() ?: 0
+//            // If local video is started, restart
+//            if (meetingModel.isLocalVideoStarted) {
+//                startLocalVideo()
+//            }
+//        })
+//        videoConfigDialogBuilder.show()
+//    }
 
     private fun refreshNoVideosOrScreenShareAvailableText() {
         if (meetingModel.tabIndex == SubTab.Video.position) {
@@ -1305,21 +1303,21 @@ class MeetingFragment : Fragment(),
         }
     }
 
-    private suspend fun disableMeetingTranscription(
-        meetingId: String?,
-        meetingEndpointUrl: String
-    ): String? {
-        val meetingUrl =
-            if (meetingEndpointUrl.endsWith("/")) meetingEndpointUrl else meetingEndpointUrl.plus("/")
-        val url = "${meetingUrl}stop_transcription?title=${encodeURLParam(meetingId)}"
-        val response = HttpUtils.post(URL(url), "", DefaultBackOffRetry(), logger)
-        return if (response.httpException == null) {
-            response.data
-        } else {
-            logger.error(TAG, "Error sending stop transcription request ${response.httpException}")
-            null
-        }
-    }
+//    private suspend fun disableMeetingTranscription(
+//        meetingId: String?,
+//        meetingEndpointUrl: String
+//    ): String? {
+//        val meetingUrl =
+//            if (meetingEndpointUrl.endsWith("/")) meetingEndpointUrl else meetingEndpointUrl.plus("/")
+//        val url = "${meetingUrl}stop_transcription?title=${encodeURLParam(meetingId)}"
+//        val response = HttpUtils.post(URL(url), "", DefaultBackOffRetry(), logger)
+//        return if (response.httpException == null) {
+//            response.data
+//        } else {
+//            logger.error(TAG, "Error sending stop transcription request ${response.httpException}")
+//            null
+//        }
+//    }
 
     private fun onVideoPageUpdated() {
         val oldList = mutableListOf<VideoCollectionTile>()
@@ -1415,11 +1413,11 @@ class MeetingFragment : Fragment(),
         audioVideo.updateVideoSourceSubscriptions(emptyMap(), removedList.toTypedArray())
     }
 
-    private fun pauseAllContentShares() {
-        meetingModel.currentScreenTiles.iterator().forEach {
-            unsubscribeRemoteVideoByTileState(it.videoTileState)
-        }
-    }
+//    private fun pauseAllContentShares() {
+//        meetingModel.currentScreenTiles.iterator().forEach {
+//            unsubscribeRemoteVideoByTileState(it.videoTileState)
+//        }
+//    }
 
     private fun revalidateVideoPageIndex() {
         while (meetingModel.canGoToPrevVideoPage() && meetingModel.remoteVideoCountInCurrentPage() == 0) {
