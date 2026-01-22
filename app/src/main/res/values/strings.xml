@@ -7,7 +7,7 @@
     <string name="app_name">Netizen Labs</string>
     <string name="join_meeting_url">Enter Invitation Link</string>
     <string name="edit_name">User ID</string>
-    <string name="main_title">Join a meeting</string>
+    <string name="main_title">Welcome to Netizen Labs</string>
     <string name="audio_mode_spinner">Audio Mode</string>
     <string name="audio_device_capabilities_spinner">Audio Device Capabilities</string>
     <string name="audio_redundancy_switch">Audio Redundancy</string>
