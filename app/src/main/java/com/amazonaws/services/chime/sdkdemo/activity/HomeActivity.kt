@@ -198,8 +198,9 @@ class HomeActivity : AppCompatActivity() {
         } else {
             authenticationProgressBar?.visibility = View.VISIBLE
 
+            val serverUrl = getTestUrl()
             val primaryMeetingId = debugSettingsViewModel.primaryMeetingId.value
-            val meetingResponseJson: String? = joinMeeting(sessionId, userId, primaryMeetingId)
+            val meetingResponseJson: String? = joinMeeting(serverUrl, sessionId, userId, primaryMeetingId)
 
             authenticationProgressBar?.visibility = View.INVISIBLE
 
@@ -210,6 +211,7 @@ class HomeActivity : AppCompatActivity() {
                     putExtras(
                         bundleOf(
                             MEETING_RESPONSE_KEY to meetingResponseJson,
+                            MEETING_ENDPOINT_KEY to serverUrl,
                             AUDIO_MODE_KEY to audioVideoConfig.audioMode.value,
                             AUDIO_DEVICE_CAPABILITIES_KEY to audioVideoConfig.audioDeviceCapabilities,
                             ENABLE_AUDIO_REDUNDANCY_KEY to audioVideoConfig.enableAudioRedundancy,
@@ -223,11 +225,11 @@ class HomeActivity : AppCompatActivity() {
         }
 
     private suspend fun joinMeeting(
+        serverUrl: String,
         sessionId: String,
         userId: String,
         primaryMeetingId: String?
     ): String? {
-        val serverUrl = getTestUrl()
         val meetingServerUrl = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
         var url = "${meetingServerUrl}join?sessionId=${encodeURLParam(sessionId)}&userId=${encodeURLParam(userId)}"
         if (!primaryMeetingId.isNullOrEmpty()) {
