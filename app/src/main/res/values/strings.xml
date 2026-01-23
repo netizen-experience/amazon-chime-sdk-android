@@ -112,6 +112,8 @@
     <string name="alert_title_additional_options">Additional Options</string>
 
     <!-- Service -->
+    <string name="camera_notification_tile">Camera in use</string>
+    <string name="camera_notification_text">The camera is being used by Netizen Labs.</string>
     <string name="microphone_notification_tile">Microphone in use</string>
     <string name="microphone_notification_text">The microphone is being used by Netizen Labs.</string>
     <string name="screen_capture_notification_tile">Screen Sharing</string>
