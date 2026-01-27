@@ -72,9 +72,9 @@ class MeetingModel : ViewModel() {
     var isLiveTranscriptionEnabled = false
     var lastReceivedMessageTimestamp = 0L
     var tabIndex = 0
-    var isUsingCameraCaptureSource = true
+    val isUsingCameraCaptureSource = true
     var isLocalVideoStarted = false
-    var wasLocalVideoStarted = false
+//    var wasLocalVideoStarted = false
     var isUsingGpuVideoProcessor = false
     var isUsingCpuVideoProcessor = false
     var isUsingBackgroundBlur = false
@@ -93,6 +93,8 @@ class MeetingModel : ViewModel() {
     }
     var isScreenShareServiceBound = false
     var screenShareServiceConnection: ServiceConnection? = null
+    var isCameraServiceBound = false
+    var cameraServiceConnection: ServiceConnection? = null
 
     fun getRemoteVideoTileStates(): List<VideoCollectionTile> {
         return remoteVideoTileStates

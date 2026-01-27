@@ -35,6 +35,7 @@ import com.amazonaws.services.chime.sdk.meetings.utils.logger.ConsoleLogger
 import com.amazonaws.services.chime.sdk.meetings.utils.logger.LogLevel
 import com.amazonaws.services.chime.sdkdemo.R
 import com.amazonaws.services.chime.sdkdemo.data.JoinMeetingResponse
+import com.amazonaws.services.chime.sdkdemo.device.CameraManager
 import com.amazonaws.services.chime.sdkdemo.device.ScreenShareManager
 import com.amazonaws.services.chime.sdkdemo.fragment.DeviceManagementFragment
 import com.amazonaws.services.chime.sdkdemo.fragment.MeetingFragment
@@ -193,6 +194,7 @@ class MeetingActivity : AppCompatActivity(),
         meetingSessionModel.backgroundReplacementVideoFrameProcessor.release()
         meetingSessionModel.screenShareManager?.stop()
         meetingSessionModel.screenShareManager?.release()
+        meetingSessionModel.cameraManager?.stop()
     }
 
     fun getAudioVideo(): AudioVideoFacade = meetingSessionModel.audioVideo
@@ -227,6 +229,12 @@ class MeetingActivity : AppCompatActivity(),
 
     fun setScreenShareManager(screenShareManager: ScreenShareManager?) {
         meetingSessionModel.screenShareManager = screenShareManager
+    }
+
+    fun getCameraManager(): CameraManager? = meetingSessionModel.cameraManager
+
+    fun setCameraManager(cameraManager: CameraManager) {
+        meetingSessionModel.cameraManager = cameraManager
     }
 
     private fun urlRewriter(url: String): String {
