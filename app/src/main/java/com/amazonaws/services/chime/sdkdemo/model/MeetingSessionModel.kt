@@ -15,6 +15,7 @@ import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.gl.EglCoreFact
 import com.amazonaws.services.chime.sdk.meetings.session.MeetingSession
 import com.amazonaws.services.chime.sdk.meetings.session.MeetingSessionConfiguration
 import com.amazonaws.services.chime.sdk.meetings.session.MeetingSessionCredentials
+import com.amazonaws.services.chime.sdkdemo.device.CameraManager
 import com.amazonaws.services.chime.sdkdemo.device.ScreenShareManager
 import com.amazonaws.services.chime.sdkdemo.utils.CpuVideoProcessor
 import com.amazonaws.services.chime.sdkdemo.utils.GpuVideoProcessor
@@ -41,6 +42,8 @@ class MeetingSessionModel : ViewModel() {
 
     // Source for screen capture and share, will be set only if created in call
     var screenShareManager: ScreenShareManager? = null
+
+    var cameraManager: CameraManager? = null
 
     // For use with replica promotions, null if not a replica meeting
     var primaryExternalMeetingId: String? = null
