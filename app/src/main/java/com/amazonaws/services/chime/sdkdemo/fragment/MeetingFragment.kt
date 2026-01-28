@@ -498,6 +498,8 @@ class MeetingFragment : Fragment(),
         tabLayout.addTab(
             tabLayout.newTab().setText("Screen").setContentDescription("Screen Tab")
         )
+        tabLayout.addTab(tabLayout.newTab().setText("Attendee").setContentDescription("Attendee Tab"))
+        tabLayout.addTab(tabLayout.newTab().setText("Chat").setContentDescription("Chat Tab"))
         // SubTab.values().iterator().forEach {
         //     tabLayout.addTab(
         //         tabLayout.newTab().setText(it.name).setContentDescription("${it.name} Tab")

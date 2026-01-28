@@ -27,11 +27,12 @@ android {
     defaultConfig {
         minSdkVersion project.ext.chimeMinSdkVersion
         targetSdkVersion project.ext.chimeTargetSdkVersion
-        versionCode generateVersionCode()
-        versionName generateVersionName()
         consumerProguardFiles 'consumer-rules.pro'
         renderscriptTargetApi 21
         renderscriptSupportModeEnabled true
+
+        versionCode generateVersionCode()
+        versionName generateVersionName()
     }
 
     kotlinOptions {
@@ -78,6 +79,9 @@ android {
         jvmTarget = '17'
     }
     namespace 'com.amazonaws.services.chime.sdk'
+    buildFeatures {
+        buildConfig true
+    }
 
     defaultConfig {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -117,12 +121,12 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest','creat
     }
 
     def fileFilter = ['**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*', '**/*Test*.*', 'android/**/*.*']
-    def kotlinTree = fileTree(dir: "$project.buildDir/tmp/kotlin-classes/debug", excludes: fileFilter)
+    def kotlinTree = fileTree(dir: "$layout.buildDirectory/tmp/kotlin-classes/debug", excludes: fileFilter)
     def mainSrc = "src/main/java"
 
     sourceDirectories.setFrom(files([mainSrc]))
     classDirectories.setFrom(files([kotlinTree]))
-    executionData.setFrom(files([fileTree(dir: "$buildDir", includes: [
+    executionData.setFrom(files([fileTree(dir: "$layout.buildDirectory", includes: [
             "jacoco/testDebugUnitTest.exec",
             "outputs/code_coverage/debugAndroidTest/connected/**ec"]), "jacoco.exec"]))
 }
