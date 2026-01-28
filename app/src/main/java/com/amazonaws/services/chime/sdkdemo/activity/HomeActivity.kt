@@ -36,7 +36,6 @@ import com.amazonaws.services.chime.sdkdemo.model.DebugSettingsViewModel
 import com.amazonaws.services.chime.sdkdemo.utils.encodeURLParam
 import com.amazonaws.services.chime.sdkdemo.utils.showToast
 import java.net.URL
-import kotlin.text.split
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
