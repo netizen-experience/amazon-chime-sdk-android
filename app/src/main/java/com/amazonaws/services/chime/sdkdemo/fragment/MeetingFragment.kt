@@ -1234,10 +1234,11 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
 //            audioVideo.startLocalVideo(localVideoConfig)
 //        }
 
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
         val fragmentContext = requireContext() as MeetingActivity
         meetingModel.cameraServiceConnection = object : ServiceConnection {
             override fun onServiceConnected(className: ComponentName, service: IBinder) {
-                meetingModel.isLocalVideoStarted = true
                 val localVideoConfig =
                     LocalVideoConfiguration(meetingModel.localVideoMaxBitRateKbps)
 
@@ -1260,13 +1261,13 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
                     }
                 }
 
-                meetingModel.isCameraServiceBound = true
-
                 cameraManager = CameraManager(cameraCaptureSource, fragmentContext)
                 cameraManager?.cameraConnectionService = meetingModel.cameraServiceConnection
                 cameraManager?.addObserver(cameraSourceObserver)
                 cameraManager?.start()
-                fragmentContext.setCameraManager(cameraManager!!)
+                cameraManager?.let { fragmentContext.setCameraManager(it) }
+                meetingModel.isLocalVideoStarted = true
+                meetingModel.isCameraServiceBound = true
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -1274,15 +1275,13 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
             }
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            fragmentContext.startForegroundService(
-                Intent(fragmentContext, CameraService::class.java).also { intent ->
-                    meetingModel.cameraServiceConnection?.let {
-                        context?.bindService(intent, it, Context.BIND_AUTO_CREATE)
-                    }
+        fragmentContext.startForegroundService(
+            Intent(fragmentContext, CameraService::class.java).also { intent ->
+                meetingModel.cameraServiceConnection?.let {
+                    context?.bindService(intent, it, Context.BIND_AUTO_CREATE)
                 }
-            )
-        }
+            }
+        )
 
         buttonCamera.setImageResource(R.drawable.button_camera_on)
     }
@@ -1291,11 +1290,7 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
         audioVideo.stopLocalVideo()
         cameraManager?.stop(meetingModel.isCameraServiceBound)
         meetingModel.isCameraServiceBound = false
-
         meetingModel.isLocalVideoStarted = false
-        if (meetingModel.isUsingCameraCaptureSource) {
-            cameraCaptureSource.stop()
-        }
         buttonCamera.setImageResource(R.drawable.button_camera)
     }
 
@@ -1982,21 +1977,12 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
     // Handle backgrounded app returning to active
     override fun onStart() {
         super.onStart()
-//        if (meetingModel.wasLocalVideoStarted) {
-//            startLocalVideo()
-//        }
         audioVideo.startRemoteVideo()
     }
 
     // Handle app going into background
     override fun onStop() {
         super.onStop()
-//        meetingModel.wasLocalVideoStarted = meetingModel.isLocalVideoStarted
-//        if (meetingModel.wasLocalVideoStarted) {
-//            stopLocalVideo()
-//            cameraManager?.stop(meetingModel.isCameraServiceBound)
-//        }
-//        audioVideo.stopRemoteVideo()
 
         // Turn off screen share when screen locked
         if (meetingModel.isSharingContent && !powerManager.isInteractive) {
