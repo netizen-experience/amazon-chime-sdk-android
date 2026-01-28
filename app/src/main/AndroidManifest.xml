@@ -6,11 +6,17 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
@@ -41,6 +47,10 @@
         <service android:name=".service.MicrophoneService"
             android:enabled="true"
             android:foregroundServiceType="microphone"
+            android:exported="false" />
+        <service android:name=".service.CameraService"
+            android:enabled="true"
+            android:foregroundServiceType="camera"
             android:exported="false" />
         <service
             android:name=".service.ScreenCaptureService"
