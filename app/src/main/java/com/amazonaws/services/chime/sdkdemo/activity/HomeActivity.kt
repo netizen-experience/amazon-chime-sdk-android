@@ -135,18 +135,22 @@ class HomeActivity : AppCompatActivity() {
             return
         }
 
-        val meetingUrl = URL(meetingUrlInput)
-        val queryParams = meetingUrl.query?.split('&')?.associate {
-            val parts = it.split('=')
-            parts[0] to parts.getOrElse(1) { "" }
+        try {
+            val meetingUrl = URL(meetingUrlInput)
+            val queryParams = meetingUrl.query?.split('&')?.associate {
+                val parts = it.split('=')
+                parts[0] to parts.getOrElse(1) { "" }
+            }
+
+            val redirectPath = queryParams?.get("redirect")
+            val lastSlug = redirectPath?.split("/")?.last()
+            sessionId = lastSlug?.split("-")?.last()
+            userId = queryParams?.get("id")
+
+            authenticate(sessionId, userId)
+        } catch (e: Exception) {
+            showToast(getString(R.string.user_notification_meeting_url_invalid))
         }
-
-        val redirectPath = queryParams?.get("redirect")
-        val lastSlug = redirectPath?.split("/")?.last()
-        sessionId = lastSlug?.split("-")?.last()
-        userId = queryParams?.get("id")
-
-        authenticate(sessionId, userId)
     }
 
     private fun getServerUrl(): String {
