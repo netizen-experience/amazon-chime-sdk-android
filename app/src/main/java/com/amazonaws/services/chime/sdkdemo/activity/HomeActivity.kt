@@ -233,7 +233,7 @@ class HomeActivity : AppCompatActivity() {
         userId: String,
         primaryMeetingId: String?
     ): String? {
-        var url = "${serverUrl}join?sessionId=${encodeURLParam(sessionId)}&userId=${encodeURLParam(userId)}"
+        var url = "${serverUrl}meeting/join-info?sessionId=${encodeURLParam(sessionId)}&userId=${encodeURLParam(userId)}"
         if (!primaryMeetingId.isNullOrEmpty()) {
             url += "&primaryExternalMeetingId=${encodeURLParam(primaryMeetingId)}"
         }
