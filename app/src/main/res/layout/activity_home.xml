@@ -21,28 +21,29 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="32dp"
         android:text="@string/main_title"
+        android:textAlignment="center"
         android:textAppearance="@style/TextAppearance.AppCompat.Display1" />
 
     <EditText
-        android:id="@+id/editMeetingId"
+        android:id="@+id/joinMeetingUrl"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        android:hint="@string/edit_meeting_id"
+        android:hint="@string/join_meeting_url"
         android:importantForAutofill="no"
-        android:inputType="text"
-        android:maxLength="100"
+        android:inputType="textUri"
+        android:maxLength="1000"
         android:textAlignment="viewStart" />
 
-    <EditText
-        android:id="@+id/editName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:hint="@string/edit_name"
-        android:importantForAutofill="no"
-        android:inputType="text"
-        android:textAlignment="viewStart" />
+<!--    <EditText-->
+<!--        android:id="@+id/editName"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginBottom="16dp"-->
+<!--        android:hint="@string/edit_name"-->
+<!--        android:importantForAutofill="no"-->
+<!--        android:inputType="text"-->
+<!--        android:textAlignment="viewStart" />-->
 
     <androidx.appcompat.widget.AppCompatSpinner
         android:id="@+id/audioModeSpinner"

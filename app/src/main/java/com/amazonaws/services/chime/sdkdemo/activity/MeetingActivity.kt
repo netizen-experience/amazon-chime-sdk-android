@@ -52,9 +52,7 @@ class MeetingActivity : AppCompatActivity(),
     private val gson = Gson()
     private val meetingSessionModel: MeetingSessionModel by lazy { ViewModelProvider(this)[MeetingSessionModel::class.java] }
 
-    private lateinit var meetingId: String
     private var primaryExternalMeetingId: String? = null
-    private lateinit var name: String
     private lateinit var audioVideoConfig: AudioVideoConfiguration
     private lateinit var meetingEndpointUrl: String
 
@@ -67,9 +65,6 @@ class MeetingActivity : AppCompatActivity(),
         setContentView(R.layout.activity_meeting)
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
-
-        meetingId = intent.extras?.getString(HomeActivity.MEETING_ID_KEY) as String
-        name = intent.extras?.getString(HomeActivity.NAME_KEY) as String
         val audioMode = intent.extras?.getInt(HomeActivity.AUDIO_MODE_KEY)?.let { intValue ->
             AudioMode.from(intValue, defaultAudioMode = AudioMode.Stereo48K)
         } ?: AudioMode.Stereo48K
@@ -85,7 +80,7 @@ class MeetingActivity : AppCompatActivity(),
             val sessionConfig =
                 createSessionConfigurationAndExtractPrimaryMeetingInformation(meetingResponseJson)
             val meetingSession = sessionConfig?.let {
-                logger.info(TAG, "Creating meeting session for meeting Id: $meetingId")
+                logger.info(TAG, "Creating meeting session")
 
                 DefaultMeetingSession(
                     it,
@@ -149,7 +144,7 @@ class MeetingActivity : AppCompatActivity(),
                 )
 
             val deviceManagementFragment =
-                DeviceManagementFragment.newInstance(meetingId, name, audioVideoConfig)
+                DeviceManagementFragment.newInstance()
             deviceManagementFragment.setVideoMaxResolution(meetingSessionModel.meetingSession.configuration.features.videoMaxResolution)
             supportFragmentManager
                 .beginTransaction()
@@ -160,7 +155,7 @@ class MeetingActivity : AppCompatActivity(),
 
     override fun onJoinMeetingClicked() {
         val rosterViewFragment =
-            MeetingFragment.newInstance(meetingId, audioVideoConfig, meetingEndpointUrl)
+            MeetingFragment.newInstance(audioVideoConfig, meetingEndpointUrl)
         supportFragmentManager
             .beginTransaction()
             .replace(R.id.root_layout, rosterViewFragment, "rosterViewFragment")
@@ -253,7 +248,7 @@ class MeetingActivity : AppCompatActivity(),
             val mediaPlacement: MediaPlacement = meetingResp.MediaPlacement
             val mediaRegion: String = meetingResp.MediaRegion
             val meetingId: String = meetingResp.MeetingId
-            val meetingFeatures: MeetingFeatures = MeetingFeatures(meetingResp.MeetingFeatures?.Video?.MaxResolution, meetingResp.MeetingFeatures?.Content?.MaxResolution)
+            val meetingFeatures = MeetingFeatures(meetingResp.MeetingFeatures?.Video?.MaxResolution, meetingResp.MeetingFeatures?.Content?.MaxResolution)
             val meeting =
                 Meeting(
                     externalMeetingId,

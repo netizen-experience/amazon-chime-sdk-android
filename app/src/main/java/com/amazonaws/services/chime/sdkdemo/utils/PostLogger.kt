@@ -5,21 +5,21 @@
 
 package com.amazonaws.services.chime.sdkdemo.utils
 
-import android.util.Log
+// import android.util.Log
 import com.amazonaws.services.chime.sdk.meetings.session.MeetingSessionConfiguration
 import com.amazonaws.services.chime.sdk.meetings.utils.logger.LogLevel
 import com.amazonaws.services.chime.sdk.meetings.utils.logger.Logger
 import com.google.gson.Gson
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
+// import java.io.BufferedReader
+// import java.io.InputStreamReader
+// import java.net.HttpURLConnection
+// import java.net.URL
 import java.util.Calendar
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+// import kotlinx.coroutines.withContext
 
 class PostLogger(
     private val name: String,
@@ -66,9 +66,10 @@ class PostLogger(
     }
 
     fun publishLog(tag: String) {
-        val body = makeRequestBody(logEntries)
+//        val body = makeRequestBody(logEntries)
         uiScope.launch {
-            makeRequest(body, tag)
+//            makeRequest(body, tag)
+            makeRequest()
         }
     }
 
@@ -77,46 +78,50 @@ class PostLogger(
         saveLog(msg, type)
     }
 
-    private suspend fun makeRequest(body: String, tag: String) {
-        withContext(Dispatchers.IO) {
-            try {
-                val serverUrl = URL(url)
-                val response = StringBuffer()
-                with(serverUrl.openConnection() as HttpURLConnection) {
-                    requestMethod = "POST"
-                    doInput = true
-                    doOutput = true
-                    setRequestProperty("Accept", "application/json")
-
-                    outputStream.use {
-                        val input = body.toByteArray()
-                        it.write(input, 0, input.size)
-                    }
-
-                    BufferedReader(InputStreamReader(inputStream)).use {
-                        var inputLine = it.readLine()
-                        while (inputLine != null) {
-                            response.append(inputLine)
-                            inputLine = it.readLine()
-                        }
-                        it.close()
-                    }
-
-                    if (responseCode == 200) {
-                        Log.i(tag, "Publishing log was successful")
-                        response.toString()
-                        logEntries.clear()
-                    } else {
-                        Log.e(tag, "Unable to publish log. Response code: $responseCode")
-                        null
-                    }
-                }
-            } catch (exception: Exception) {
-                Log.e(tag, "There was an exception while posting logs: $exception")
-                null
-            }
-        }
+    private fun makeRequest() {
+        logEntries.clear()
     }
+
+//    private suspend fun makeRequest(body: String, tag: String) {
+//        withContext(Dispatchers.IO) {
+//            try {
+//                val serverUrl = URL(url)
+//                val response = StringBuffer()
+//                with(serverUrl.openConnection() as HttpURLConnection) {
+//                    requestMethod = "POST"
+//                    doInput = true
+//                    doOutput = true
+//                    setRequestProperty("Accept", "application/json")
+//
+//                    outputStream.use {
+//                        val input = body.toByteArray()
+//                        it.write(input, 0, input.size)
+//                    }
+//
+//                    BufferedReader(InputStreamReader(inputStream)).use {
+//                        var inputLine = it.readLine()
+//                        while (inputLine != null) {
+//                            response.append(inputLine)
+//                            inputLine = it.readLine()
+//                        }
+//                        it.close()
+//                    }
+//
+//                    if (responseCode == 200) {
+//                        Log.i(tag, "Publishing log was successful")
+//                        response.toString()
+//                        logEntries.clear()
+//                    } else {
+//                        Log.e(tag, "Unable to publish log. Response code: $responseCode")
+//                        null
+//                    }
+//                }
+//            } catch (exception: Exception) {
+//                Log.e(tag, "There was an exception while posting logs: $exception")
+//                null
+//            }
+//        }
+//    }
 
     private fun makeRequestBody(batch: MutableList<LogEntry>): String {
         val body = mutableMapOf(

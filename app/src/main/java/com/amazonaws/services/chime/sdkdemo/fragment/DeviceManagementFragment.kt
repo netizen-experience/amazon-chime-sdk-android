@@ -16,11 +16,8 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
 import android.widget.TextView
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
-import com.amazonaws.services.chime.sdk.meetings.audiovideo.AudioVideoConfiguration
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.AudioVideoFacade
-import com.amazonaws.services.chime.sdk.meetings.audiovideo.audio.AudioMode
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.DefaultVideoRenderView
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.VideoResolution
 import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.capture.CameraCaptureSource
@@ -31,11 +28,9 @@ import com.amazonaws.services.chime.sdk.meetings.device.MediaDeviceType
 import com.amazonaws.services.chime.sdk.meetings.utils.logger.ConsoleLogger
 import com.amazonaws.services.chime.sdk.meetings.utils.logger.LogLevel
 import com.amazonaws.services.chime.sdkdemo.R
-import com.amazonaws.services.chime.sdkdemo.activity.HomeActivity
 import com.amazonaws.services.chime.sdkdemo.activity.MeetingActivity
 import com.amazonaws.services.chime.sdkdemo.utils.addPaddingsForSystemBars
 import com.amazonaws.services.chime.sdkdemo.utils.isLandscapeMode
-import java.lang.ClassCastException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -74,14 +69,9 @@ class DeviceManagementFragment : Fragment(), DeviceChangeObserver {
     private val MAX_VIDEO_FORMAT_FPS = 30
 
     companion object {
-        fun newInstance(meetingId: String, name: String, audioVideoConfig: AudioVideoConfiguration): DeviceManagementFragment {
+        fun newInstance(): DeviceManagementFragment {
             val fragment = DeviceManagementFragment()
 
-            fragment.arguments = bundleOf(
-                HomeActivity.MEETING_ID_KEY to meetingId,
-                HomeActivity.NAME_KEY to name,
-                HomeActivity.AUDIO_MODE_KEY to audioVideoConfig.audioMode.value
-            )
             return fragment
         }
     }
@@ -110,14 +100,9 @@ class DeviceManagementFragment : Fragment(), DeviceChangeObserver {
         val view = inflater.inflate(R.layout.fragment_device_management, container, false)
         val context = activity as Context
 
-        val meetingId = arguments?.getString(HomeActivity.MEETING_ID_KEY)
-        val name = arguments?.getString(HomeActivity.NAME_KEY)
-        val audioMode = arguments?.getInt(HomeActivity.AUDIO_MODE_KEY)?.let { intValue ->
-            AudioMode.from(intValue, defaultAudioMode = AudioMode.Stereo48K)
-        } ?: AudioMode.Stereo48K
         audioVideo = (activity as MeetingActivity).getAudioVideo()
 
-        val displayedText = getString(R.string.preview_meeting_info, meetingId, name)
+        val displayedText = getString(R.string.preview_meeting_info)
         view.findViewById<TextView>(R.id.textViewMeetingPreview)?.text = displayedText
 
         view.findViewById<Button>(R.id.buttonJoin)?.setOnClickListener {
