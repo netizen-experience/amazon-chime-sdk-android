@@ -19,6 +19,29 @@ object HttpUtils {
     private val SYSPROP_USER_AGENT = "http.agent"
     private val USER_AGENT_HEADER = "User-Agent"
 
+    private suspend fun executeWithRetry(
+        backOffRetry: BackOffRetry,
+        block: suspend () -> HttpResponse
+    ): HttpResponse {
+        var response: HttpResponse
+        do {
+            response = block()
+
+            val errorCode = response.httpException?.errorCode ?: 0
+            if (response.httpException == null || !backOffRetry.isRetryableCode(errorCode)) {
+                return response
+            }
+
+            backOffRetry.incrementRetryCount()
+            val waitTime = backOffRetry.calculateBackOff()
+            if (waitTime > 0) {
+                delay(waitTime)
+            }
+        } while (backOffRetry.isRetryCountLimitReached())
+
+        return response
+    }
+
     /**
      * Post request. In order to get value, one has to do
      * dispatcher.launch {
@@ -40,22 +63,9 @@ object HttpUtils {
         logger: Logger? = null,
         headers: Map<String, String> = emptyMap()
     ): HttpResponse {
-        var response: HttpResponse
-        do {
-            response = makePostRequest(url, body, logger, headers)
-            if (response.httpException == null || !backOffRetry.isRetryableCode(
-                    response.httpException?.errorCode ?: 0
-                )
-            ) {
-                return response
-            }
-            backOffRetry.incrementRetryCount()
-            val waitTime = backOffRetry.calculateBackOff()
-            if (waitTime > 0) {
-                delay(waitTime)
-            }
-        } while (backOffRetry.isRetryCountLimitReached())
-        return response
+        return executeWithRetry(backOffRetry) {
+            makePostRequest(url, body, logger, headers)
+        }
     }
 
     private suspend fun makePostRequest(url: URL, body: String, logger: Logger?, headers: Map<String, String>): HttpResponse {
@@ -85,6 +95,58 @@ object HttpUtils {
                             inputLine = it.readLine()
                         }
                         it.close()
+                    }
+
+                    if (responseCode in 200..299) {
+                        return@withContext HttpResponse(response.toString(), null)
+                    }
+
+                    return@withContext HttpResponse(
+                        response.toString(),
+                        HttpException(errorCode = responseCode)
+                    )
+                }
+            } catch (exception: Exception) {
+                logger?.error(TAG, "Unable to send request $exception")
+                return@withContext HttpResponse(null, HttpException(null, exception.toString()))
+            }
+        }
+    }
+
+    suspend fun get(
+        url: URL,
+        backOffRetry: BackOffRetry = DefaultBackOffRetry(),
+        logger: Logger? = null,
+        headers: Map<String, String> = emptyMap()
+    ): HttpResponse {
+        return executeWithRetry(backOffRetry) {
+            makeGetRequest(url, logger, headers)
+        }
+    }
+
+    private suspend fun makeGetRequest(url: URL, logger: Logger?, headers: Map<String, String>): HttpResponse {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = StringBuffer()
+                with(url.openConnection() as HttpURLConnection) {
+                    requestMethod = "GET"
+                    doInput = true
+                    doOutput = false
+
+                    for (header in headers) {
+                        setRequestProperty(header.key, header.value)
+                    }
+
+                    val userAgent = System.getProperty(SYSPROP_USER_AGENT)
+                    setRequestProperty(USER_AGENT_HEADER, userAgent)
+
+                    val inStream = if (responseCode in 200..299) inputStream else errorStream
+                    BufferedReader(InputStreamReader(inStream)).use {
+                        var inputLine = it.readLine()
+                        while (inputLine != null) {
+                            response.append(inputLine)
+                            inputLine = it.readLine()
+                        }
                     }
 
                     if (responseCode in 200..299) {

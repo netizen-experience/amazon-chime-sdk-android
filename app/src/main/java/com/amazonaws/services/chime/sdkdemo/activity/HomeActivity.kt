@@ -233,11 +233,11 @@ class HomeActivity : AppCompatActivity() {
         userId: String,
         primaryMeetingId: String?
     ): String? {
-        var url = "${serverUrl}join?sessionId=${encodeURLParam(sessionId)}&userId=${encodeURLParam(userId)}"
+        var url = "${serverUrl}meeting/join-info?userId=${encodeURLParam(userId)}&sessionId=${encodeURLParam(sessionId)}"
         if (!primaryMeetingId.isNullOrEmpty()) {
             url += "&primaryExternalMeetingId=${encodeURLParam(primaryMeetingId)}"
         }
-        val response = HttpUtils.post(URL(url), "", DefaultBackOffRetry(), logger)
+        val response = HttpUtils.get(URL(url), DefaultBackOffRetry(), logger)
         return if (response.httpException == null) {
             response.data
         } else {
