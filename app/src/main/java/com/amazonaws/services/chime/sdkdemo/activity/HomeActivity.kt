@@ -36,6 +36,8 @@ import com.amazonaws.services.chime.sdkdemo.model.DebugSettingsViewModel
 import com.amazonaws.services.chime.sdkdemo.utils.encodeURLParam
 import com.amazonaws.services.chime.sdkdemo.utils.showToast
 import java.net.URL
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -104,6 +106,18 @@ class HomeActivity : AppCompatActivity() {
         debugSettingsFragment.show(supportFragmentManager, TAG)
     }
 
+    private fun parseMeetingUrl(meetingUrl: String): URL {
+        val trackerSignature = "awstrack.me/l0/"
+        if (!meetingUrl.contains(trackerSignature, ignoreCase = true)) return URL(meetingUrl)
+
+        val extractedUrl = meetingUrl.lowercase().substringAfter(trackerSignature)
+            .substringBefore("/")
+
+        val decodedUrl = URLDecoder.decode(extractedUrl, StandardCharsets.UTF_8.name())
+
+        return URL(decodedUrl)
+    }
+
     private fun joinMeeting() {
         var mode = AudioMode.Stereo48K
         when (audioMode?.selectedItemPosition ?: 0) {
@@ -136,7 +150,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         try {
-            val meetingUrl = URL(meetingUrlInput)
+            val meetingUrl = parseMeetingUrl(meetingUrlInput)
             val queryParams = meetingUrl.query?.split('&')?.associate {
                 val parts = it.split('=')
                 parts[0] to parts.getOrElse(1) { "" }
