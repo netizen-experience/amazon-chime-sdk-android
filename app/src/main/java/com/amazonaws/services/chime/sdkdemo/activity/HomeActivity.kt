@@ -70,6 +70,9 @@ class HomeActivity : AppCompatActivity() {
         const val AUDIO_DEVICE_CAPABILITIES_KEY = "AUDIO_DEVICE_CAPABILITIES"
         const val ENABLE_AUDIO_REDUNDANCY_KEY = "ENABLE_AUDIO_REDUNDANCY"
         const val RECONNECT_TIMEOUT_MS = "RECONNECT_TIMEOUT_MS"
+        const val ATTENDEE_ID = "ATTENDEE_ID"
+        const val USER_ID = "USER_ID"
+        const val SESSION_ID = "SESSION_ID"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -232,7 +235,8 @@ class HomeActivity : AppCompatActivity() {
                             AUDIO_MODE_KEY to audioVideoConfig.audioMode.value,
                             AUDIO_DEVICE_CAPABILITIES_KEY to audioVideoConfig.audioDeviceCapabilities,
                             ENABLE_AUDIO_REDUNDANCY_KEY to audioVideoConfig.enableAudioRedundancy,
-                            RECONNECT_TIMEOUT_MS to audioVideoConfig.reconnectTimeoutMs
+                            RECONNECT_TIMEOUT_MS to audioVideoConfig.reconnectTimeoutMs,
+                            USER_ID to userId
                         )
                     )
                 }

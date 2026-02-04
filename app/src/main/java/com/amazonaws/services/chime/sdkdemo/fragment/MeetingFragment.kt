@@ -227,7 +227,10 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
     companion object {
         fun newInstance(
             audioVideoConfig: AudioVideoConfiguration,
-            meetingEndpointUrl: String
+            meetingEndpointUrl: String,
+            sessionId: String,
+            userId: String,
+            attendeeId: String
         ): MeetingFragment {
             val fragment = MeetingFragment()
 
@@ -236,7 +239,10 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
                 HomeActivity.AUDIO_DEVICE_CAPABILITIES_KEY to audioVideoConfig.audioDeviceCapabilities,
                 HomeActivity.MEETING_ENDPOINT_KEY to meetingEndpointUrl,
                 HomeActivity.ENABLE_AUDIO_REDUNDANCY_KEY to audioVideoConfig.enableAudioRedundancy,
-                HomeActivity.RECONNECT_TIMEOUT_MS to audioVideoConfig.reconnectTimeoutMs
+                HomeActivity.RECONNECT_TIMEOUT_MS to audioVideoConfig.reconnectTimeoutMs,
+                HomeActivity.SESSION_ID to sessionId,
+                HomeActivity.USER_ID to userId,
+                HomeActivity.ATTENDEE_ID to attendeeId
             )
             return fragment
         }
