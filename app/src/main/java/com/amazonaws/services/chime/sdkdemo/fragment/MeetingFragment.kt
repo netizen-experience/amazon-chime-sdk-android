@@ -497,9 +497,6 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
         tabLayout = view.findViewById(R.id.tabLayoutMeetingView)
         tabLayout.addTab(tabLayout.newTab().setText("Video").setContentDescription("Video Tab"))
         tabLayout.addTab(tabLayout.newTab().setText("Screen").setContentDescription("Screen Tab"))
-        tabLayout.addTab(
-            tabLayout.newTab().setText("Attendee").setContentDescription("Attendee Tab")
-        )
         tabLayout.addTab(tabLayout.newTab().setText("Chat").setContentDescription("Chat Tab"))
         // SubTab.values().iterator().forEach {
         //     tabLayout.addTab(
