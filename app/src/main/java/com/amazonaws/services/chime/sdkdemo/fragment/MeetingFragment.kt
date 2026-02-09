@@ -193,7 +193,7 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
     private var hasJoinedPrimaryMeeting = false
 
     enum class SubTab(val position: Int) {
-        Video(0), Screen(1), Attendees(2), Chat(3), Captions(4), Metrics(5)
+        Video(0), Screen(1), Chat(2), Attendees(3), Captions(4), Metrics(5)
     }
 
     private lateinit var noVideoOrScreenShareAvailable: TextView
