@@ -70,6 +70,9 @@ class HomeActivity : AppCompatActivity() {
         const val AUDIO_DEVICE_CAPABILITIES_KEY = "AUDIO_DEVICE_CAPABILITIES"
         const val ENABLE_AUDIO_REDUNDANCY_KEY = "ENABLE_AUDIO_REDUNDANCY"
         const val RECONNECT_TIMEOUT_MS = "RECONNECT_TIMEOUT_MS"
+        const val ATTENDEE_ID = "ATTENDEE_ID"
+        const val USER_ID = "USER_ID"
+        const val SESSION_ID = "SESSION_ID"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -205,39 +208,36 @@ class HomeActivity : AppCompatActivity() {
         userId: String?
     ) =
         uiScope.launch {
-            logger.info(
-                TAG,
-                "Joining meeting. sessionId: $sessionId, userId: $userId"
-            )
-
-        if (sessionId.isNullOrBlank() || userId.isNullOrBlank()) {
-            showToast(getString(R.string.user_notification_meeting_url_invalid))
-        } else {
-            authenticationProgressBar?.visibility = View.VISIBLE
-
-            val serverUrl = getServerUrl()
-            val primaryMeetingId = debugSettingsViewModel.primaryMeetingId.value
-            val meetingResponseJson: String? = joinMeeting(serverUrl, sessionId, userId, primaryMeetingId)
-
-            authenticationProgressBar?.visibility = View.INVISIBLE
-
-            if (meetingResponseJson == null) {
-                showToast(getString(R.string.user_notification_meeting_start_error))
+            if (sessionId.isNullOrBlank() || userId.isNullOrBlank()) {
+                showToast(getString(R.string.user_notification_meeting_url_invalid))
             } else {
-                val intent = Intent(applicationContext, MeetingActivity::class.java).apply {
-                    putExtras(
-                        bundleOf(
-                            MEETING_RESPONSE_KEY to meetingResponseJson,
-                            MEETING_ENDPOINT_KEY to serverUrl,
-                            AUDIO_MODE_KEY to audioVideoConfig.audioMode.value,
-                            AUDIO_DEVICE_CAPABILITIES_KEY to audioVideoConfig.audioDeviceCapabilities,
-                            ENABLE_AUDIO_REDUNDANCY_KEY to audioVideoConfig.enableAudioRedundancy,
-                            RECONNECT_TIMEOUT_MS to audioVideoConfig.reconnectTimeoutMs
+                authenticationProgressBar?.visibility = View.VISIBLE
+
+                val serverUrl = getServerUrl()
+                val primaryMeetingId = debugSettingsViewModel.primaryMeetingId.value
+                val meetingResponseJson: String? = joinMeeting(serverUrl, sessionId, userId, primaryMeetingId)
+
+                authenticationProgressBar?.visibility = View.INVISIBLE
+
+                if (meetingResponseJson == null) {
+                    showToast(getString(R.string.user_notification_meeting_start_error))
+                } else {
+                    val intent = Intent(applicationContext, MeetingActivity::class.java).apply {
+                        putExtras(
+                            bundleOf(
+                                MEETING_RESPONSE_KEY to meetingResponseJson,
+                                MEETING_ENDPOINT_KEY to serverUrl,
+                                AUDIO_MODE_KEY to audioVideoConfig.audioMode.value,
+                                AUDIO_DEVICE_CAPABILITIES_KEY to audioVideoConfig.audioDeviceCapabilities,
+                                ENABLE_AUDIO_REDUNDANCY_KEY to audioVideoConfig.enableAudioRedundancy,
+                                RECONNECT_TIMEOUT_MS to audioVideoConfig.reconnectTimeoutMs,
+                                USER_ID to userId,
+                                SESSION_ID to sessionId
+                            )
                         )
-                    )
+                    }
+                    startActivity(intent)
                 }
-                startActivity(intent)
-            }
             }
         }
 
@@ -248,10 +248,12 @@ class HomeActivity : AppCompatActivity() {
         primaryMeetingId: String?
     ): String? {
         var url = "${serverUrl}meeting/join-info?userId=${encodeURLParam(userId)}&sessionId=${encodeURLParam(sessionId)}"
+
         if (!primaryMeetingId.isNullOrEmpty()) {
             url += "&primaryExternalMeetingId=${encodeURLParam(primaryMeetingId)}"
         }
         val response = HttpUtils.get(URL(url), DefaultBackOffRetry(), logger)
+
         return if (response.httpException == null) {
             response.data
         } else {

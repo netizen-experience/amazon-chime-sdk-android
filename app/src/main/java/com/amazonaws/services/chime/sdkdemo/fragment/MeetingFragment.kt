@@ -5,9 +5,6 @@
 
 package com.amazonaws.services.chime.sdkdemo.fragment
 
-// import android.content.DialogInterface
-// import android.text.InputType
-// import com.amazonaws.services.chime.sdkdemo.activity.TranscriptionConfigActivity
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ComponentName
@@ -22,6 +19,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
+import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,9 +30,11 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -111,6 +111,7 @@ import com.amazonaws.services.chime.sdkdemo.adapter.RosterAdapter
 import com.amazonaws.services.chime.sdkdemo.adapter.VideoAdapter
 import com.amazonaws.services.chime.sdkdemo.adapter.VideoDiffCallback
 import com.amazonaws.services.chime.sdkdemo.data.Caption
+import com.amazonaws.services.chime.sdkdemo.data.ChatHistoryResponse
 import com.amazonaws.services.chime.sdkdemo.data.JoinMeetingResponse
 import com.amazonaws.services.chime.sdkdemo.data.Message
 import com.amazonaws.services.chime.sdkdemo.data.MetricData
@@ -134,6 +135,7 @@ import com.amazonaws.services.chime.sdkdemo.utils.isLandscapeMode
 import com.google.android.material.tabs.TabLayout
 import com.google.gson.Gson
 import java.net.URL
+import java.time.Instant
 import java.util.Calendar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -193,7 +195,7 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
     private var hasJoinedPrimaryMeeting = false
 
     enum class SubTab(val position: Int) {
-        Video(0), Screen(1), Attendees(2), Chat(3), Captions(4), Metrics(5)
+        Video(0), Screen(1), Chat(2), Attendees(3), Captions(4), Metrics(5)
     }
 
     private lateinit var noVideoOrScreenShareAvailable: TextView
@@ -227,7 +229,10 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
     companion object {
         fun newInstance(
             audioVideoConfig: AudioVideoConfiguration,
-            meetingEndpointUrl: String
+            meetingEndpointUrl: String,
+            sessionId: String,
+            userId: String,
+            attendeeId: String
         ): MeetingFragment {
             val fragment = MeetingFragment()
 
@@ -236,7 +241,10 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
                 HomeActivity.AUDIO_DEVICE_CAPABILITIES_KEY to audioVideoConfig.audioDeviceCapabilities,
                 HomeActivity.MEETING_ENDPOINT_KEY to meetingEndpointUrl,
                 HomeActivity.ENABLE_AUDIO_REDUNDANCY_KEY to audioVideoConfig.enableAudioRedundancy,
-                HomeActivity.RECONNECT_TIMEOUT_MS to audioVideoConfig.reconnectTimeoutMs
+                HomeActivity.RECONNECT_TIMEOUT_MS to audioVideoConfig.reconnectTimeoutMs,
+                HomeActivity.SESSION_ID to sessionId,
+                HomeActivity.USER_ID to userId,
+                HomeActivity.ATTENDEE_ID to attendeeId
             )
             return fragment
         }
@@ -335,8 +343,55 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
                     )
                 })
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                initializeChat()
+            }
+        }
         addPaddingsForSystemBars(view)
         return view
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private suspend fun initializeChat() {
+        val serverUrl = getString(R.string.server_url)
+        val sessionId = arguments?.getString(HomeActivity.SESSION_ID) as String
+        val userId = arguments?.getString(HomeActivity.USER_ID) as String
+        val attendeeId = arguments?.getString(HomeActivity.ATTENDEE_ID) as String
+
+        val url = "${serverUrl}meeting/chat-history?channel=respondent&sessionId=$sessionId&userId=$userId&attendeeId=$attendeeId"
+
+        val response = HttpUtils.get(URL(url), DefaultBackOffRetry(), logger)
+
+        if (response.httpException != null) {
+            logger.error(TAG, "Unable to fetch chat history. ${response.httpException}")
+            return
+        }
+
+        val data = gson.fromJson(response.data, ChatHistoryResponse::class.java)
+
+        if (data.messages.size == 0) return
+
+        val formattedMessages = data.messages.map { message ->
+            val senderUserId = message.sender.arn.split("/").last()
+            val isCurrentUser = isSelfAttendee(senderUserId)
+            val epoch = Instant.parse(message.createdTimestamp).toEpochMilli()
+            val strippedContent = Html.fromHtml(message.content, Html.FROM_HTML_MODE_LEGACY).toString()
+
+            object {
+                val name = getAttendeeName(isCurrentUser)
+                val createdAt = epoch
+                val content = strippedContent
+                val isCurrentUser = isCurrentUser
+            }
+        }.sortedBy { it.createdAt }
+
+        val messageList = formattedMessages.map {
+            Message(it.name, it.createdAt, it.content, it.isCurrentUser)
+        }
+
+        meetingModel.currentMessages.addAll(messageList)
     }
 
     private fun setupButtonsBar(view: View) {
@@ -491,9 +546,6 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
         tabLayout = view.findViewById(R.id.tabLayoutMeetingView)
         tabLayout.addTab(tabLayout.newTab().setText("Video").setContentDescription("Video Tab"))
         tabLayout.addTab(tabLayout.newTab().setText("Screen").setContentDescription("Screen Tab"))
-        tabLayout.addTab(
-            tabLayout.newTab().setText("Attendee").setContentDescription("Attendee Tab")
-        )
         tabLayout.addTab(tabLayout.newTab().setText("Chat").setContentDescription("Chat Tab"))
         // SubTab.values().iterator().forEach {
         //     tabLayout.addTab(
@@ -710,9 +762,8 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
 
     private suspend fun getJoinResponseForPrimaryMeeting(): MeetingSessionCredentials? {
         val meetingEndpointUrl = arguments?.getString(HomeActivity.MEETING_ENDPOINT_KEY) as String
-        val attendeeName = getAttendeeName(credentials.attendeeId, credentials.externalUserId)
         var url = "${meetingEndpointUrl}join?title=${encodeURLParam(primaryExternalMeetingId)}&name=promoted-${
-            encodeURLParam(attendeeName)
+            encodeURLParam(credentials.externalUserId)
         }"
         url += "&region=region"
         val response = HttpUtils.post(URL(url), "", DefaultBackOffRetry(), logger)
@@ -939,7 +990,7 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
                         attendeeId, {
                             RosterAttendee(
                                 attendeeId,
-                                getAttendeeName(attendeeId, externalUserId),
+                                getAttendeeName(isSelfAttendee(attendeeId)),
                                 attendeeStatus = status
                             )
                         })
@@ -950,18 +1001,8 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
         }
     }
 
-    private fun getAttendeeName(attendeeId: String, externalUserId: String): String {
-        if ((attendeeId.isEmpty() || externalUserId.isEmpty())) {
-            return "<UNKNOWN>"
-        }
-        val attendeeName =
-            if (externalUserId.contains('#')) externalUserId.split('#')[1] else externalUserId
-
-        return if (attendeeId.isContentShare()) {
-            "$attendeeName $CONTENT_NAME_SUFFIX"
-        } else {
-            attendeeName
-        }
+    private fun getAttendeeName(isCurrentUser: Boolean): String {
+        return if (isCurrentUser) "You" else "Moderator"
     }
 
     private fun toggleMute() {
@@ -1306,9 +1347,7 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
                         )
                         "<UNKNOWN>"
                     } else {
-                        getAttendeeName(
-                            item.attendee.attendeeId, item.attendee.externalUserId
-                        )
+                        getAttendeeName(isSelfAttendee(item.attendee.attendeeId))
                     }
                     val caption: Caption
                     val entities = alternative.entities
@@ -1840,14 +1879,15 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
         if (!dataMessage.throttled) {
             if (dataMessage.timestampMs <= meetingModel.lastReceivedMessageTimestamp) return
             meetingModel.lastReceivedMessageTimestamp = dataMessage.timestampMs
+            val isCurrentUser = isSelfAttendee(dataMessage.senderAttendeeId)
             meetingModel.currentMessages.add(
                 Message(
                     getAttendeeName(
-                        dataMessage.senderAttendeeId, dataMessage.senderExternalUserId
+                        isCurrentUser
                     ),
                     dataMessage.timestampMs,
                     dataMessage.text(),
-                    isSelfAttendee(dataMessage.senderAttendeeId)
+                    isCurrentUser
                 )
             )
             messageAdapter.notifyItemInserted(meetingModel.currentMessages.size - 1)

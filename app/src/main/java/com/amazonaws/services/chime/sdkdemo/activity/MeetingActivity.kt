@@ -55,6 +55,9 @@ class MeetingActivity : AppCompatActivity(),
     private var primaryExternalMeetingId: String? = null
     private lateinit var audioVideoConfig: AudioVideoConfiguration
     private lateinit var meetingEndpointUrl: String
+    private lateinit var sessionId: String
+    private lateinit var userId: String
+    private lateinit var attendeeId: String
 
     private var cachedDevice: MediaDevice? = null
 
@@ -73,12 +76,17 @@ class MeetingActivity : AppCompatActivity(),
         val reconnectTimeoutMs = intent.extras?.getInt(HomeActivity.RECONNECT_TIMEOUT_MS) as Int
         audioVideoConfig = AudioVideoConfiguration(audioMode = audioMode, audioDeviceCapabilities = audioDeviceCapabilities, enableAudioRedundancy = enableAudioRedundancy, reconnectTimeoutMs = reconnectTimeoutMs)
         meetingEndpointUrl = intent.extras?.getString(HomeActivity.MEETING_ENDPOINT_KEY) as String
+        userId = intent.extras?.getString(HomeActivity.USER_ID) as String
+        sessionId = intent.extras?.getString(HomeActivity.SESSION_ID) as String
 
         if (savedInstanceState == null) {
             val meetingResponseJson =
-                intent.extras?.getString(HomeActivity.MEETING_RESPONSE_KEY) as String
+                intent.extras?.getString(HomeActivity.MEETING_RESPONSE_KEY)
+
+            val meetingResponse = if (meetingResponseJson.isNullOrBlank()) null else gson.fromJson(meetingResponseJson, JoinMeetingResponse::class.java)
+
             val sessionConfig =
-                createSessionConfigurationAndExtractPrimaryMeetingInformation(meetingResponseJson)
+                createSessionConfigurationAndExtractPrimaryMeetingInformation(meetingResponse)
             val meetingSession = sessionConfig?.let {
                 logger.info(TAG, "Creating meeting session")
 
@@ -103,6 +111,7 @@ class MeetingActivity : AppCompatActivity(),
                 ).show()
                 finish()
             } else {
+                attendeeId = (meetingResponse as JoinMeetingResponse).joinInfo.attendeeResponse.attendee.AttendeeId
                 meetingSessionModel.meetingSession = meetingSession
                 meetingSessionModel.primaryExternalMeetingId = primaryExternalMeetingId
             }
@@ -155,7 +164,7 @@ class MeetingActivity : AppCompatActivity(),
 
     override fun onJoinMeetingClicked() {
         val rosterViewFragment =
-            MeetingFragment.newInstance(audioVideoConfig, meetingEndpointUrl)
+            MeetingFragment.newInstance(audioVideoConfig, meetingEndpointUrl, sessionId, userId, attendeeId)
         supportFragmentManager
             .beginTransaction()
             .replace(R.id.root_layout, rosterViewFragment, "rosterViewFragment")
@@ -237,11 +246,10 @@ class MeetingActivity : AppCompatActivity(),
         return url
     }
 
-    private fun createSessionConfigurationAndExtractPrimaryMeetingInformation(response: String?): MeetingSessionConfiguration? {
-        if (response.isNullOrBlank()) return null
+    private fun createSessionConfigurationAndExtractPrimaryMeetingInformation(joinMeetingResponse: JoinMeetingResponse?): MeetingSessionConfiguration? {
+        if (joinMeetingResponse == null) return null
 
         return try {
-            val joinMeetingResponse = gson.fromJson(response, JoinMeetingResponse::class.java)
             primaryExternalMeetingId = joinMeetingResponse.joinInfo.primaryExternalMeetingId
             val meetingResp = joinMeetingResponse.joinInfo.meetingResponse.meeting
             val externalMeetingId: String? = meetingResp.ExternalMeetingId
