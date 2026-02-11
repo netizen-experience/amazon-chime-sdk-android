@@ -374,8 +374,9 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
         if (data.messages.size == 0) return
 
         val formattedMessages = data.messages.map { message ->
-            val senderUserId = message.sender.arn.split("/").last()
-            val isCurrentUser = isSelfAttendee(senderUserId)
+            val senderAttendeeId = message.sender.arn.split("/").last()
+            val userAttendeeId = arguments?.getString(HomeActivity.ATTENDEE_ID) as String
+            val isCurrentUser = senderAttendeeId == userAttendeeId
             val epoch = Instant.parse(message.createdTimestamp).toEpochMilli()
             val strippedContent = Html.fromHtml(message.content, Html.FROM_HTML_MODE_LEGACY).toString()
 
@@ -1858,11 +1859,10 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
     }
 
     private fun sendMessage() {
-        val text = editTextMessage.text.toString().trim()
+        val text = "<p>${editTextMessage.text.toString().trim()}</p>"
         if (text.isBlank()) return
-        audioVideo.realtimeSendDataMessage(DATA_MESSAGE_TOPIC, text, DATA_MESSAGE_LIFETIME_MS)
         editTextMessage.text.clear()
-        // echo the message to the handler
+
         onDataMessageReceived(
             DataMessage(
                 Calendar.getInstance().timeInMillis,
@@ -1873,20 +1873,51 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
                 false
             )
         )
+        // Call send message API here
+        val sessionId = arguments?.getString(HomeActivity.SESSION_ID) as String
+        val externalUserId = arguments?.getString(HomeActivity.USER_ID) as String
+        val attendeeId = arguments?.getString(HomeActivity.ATTENDEE_ID) as String
+        viewLifecycleOwner.lifecycleScope.launch {
+            sendMessageAPI(sessionId, externalUserId, attendeeId, text)
+        }
+    }
+
+    private suspend fun sendMessageAPI(sessionId: String, userId: String, attendeeId: String, message: String) {
+        val serverUrl = getString(R.string.server_url)
+        val url = URL("${serverUrl}meeting/chat")
+
+        val bodyObject = mapOf(
+            "sessionId" to sessionId,
+            "userId" to userId,
+            "attendeeId" to attendeeId,
+            "channel" to "respondent",
+            "message" to message
+        )
+        val body = gson.toJson(bodyObject)
+
+        HttpUtils.post(url, body, DefaultBackOffRetry(), logger)
     }
 
     override fun onDataMessageReceived(dataMessage: DataMessage) {
         if (!dataMessage.throttled) {
             if (dataMessage.timestampMs <= meetingModel.lastReceivedMessageTimestamp) return
             meetingModel.lastReceivedMessageTimestamp = dataMessage.timestampMs
-            val isCurrentUser = isSelfAttendee(dataMessage.senderAttendeeId)
+            val userAttendeeId = arguments?.getString(HomeActivity.ATTENDEE_ID) as String
+            val isCurrentUser = dataMessage.senderAttendeeId == userAttendeeId
+
+            val content = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                Html.fromHtml(dataMessage.text(), Html.FROM_HTML_MODE_LEGACY).toString()
+            } else {
+                dataMessage.text()
+            }
+
             meetingModel.currentMessages.add(
                 Message(
                     getAttendeeName(
                         isCurrentUser
                     ),
                     dataMessage.timestampMs,
-                    dataMessage.text(),
+                    content,
                     isCurrentUser
                 )
             )
