@@ -1066,7 +1066,6 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
         } else {
             startLocalVideo()
         }
-        meetingModel.isCameraOn = !meetingModel.isCameraOn
         refreshNoVideosOrScreenShareAvailableText()
     }
 
@@ -1290,6 +1289,7 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
                 cameraManager?.let { fragmentContext.setCameraManager(it) }
                 meetingModel.isLocalVideoStarted = true
                 meetingModel.isCameraServiceBound = true
+                meetingModel.isCameraOn = true
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -1313,6 +1313,7 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
         cameraManager?.stop(meetingModel.isCameraServiceBound)
         meetingModel.isCameraServiceBound = false
         meetingModel.isLocalVideoStarted = false
+        meetingModel.isCameraOn = false
         buttonCamera.setImageResource(R.drawable.button_camera)
     }
 
