@@ -7,9 +7,11 @@ package com.amazonaws.services.chime.sdkdemo.fragment
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
@@ -157,6 +159,7 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
     private var deviceDialog: AlertDialog? = null
     private var cameraManager: CameraManager? = null
     private var screenShareManager: ScreenShareManager? = null
+    private var screenLockReceiver: ScreenLockReceiver? = null
     private val gson = Gson()
     private val appName = "SDKEvents"
 
@@ -225,6 +228,22 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
     private lateinit var captionAdapter: CaptionAdapter
     private lateinit var tabLayout: TabLayout
     private lateinit var audioDeviceManager: AudioDeviceManager
+
+    // Broadcast Receiver to listen to device lock events
+    private inner class ScreenLockReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    if (meetingModel.isCameraOn) {
+                        toggleLocalVideo()
+                    }
+                    if (meetingModel.isSharingContent) {
+                        toggleScreenCapture()
+                    }
+                }
+            }
+        }
+    }
 
     companion object {
         fun newInstance(
@@ -343,6 +362,13 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
                     )
                 })
         }
+
+        // Initialize screen lock receiver
+        screenLockReceiver = ScreenLockReceiver()
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        requireActivity().registerReceiver(screenLockReceiver, filter)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             viewLifecycleOwner.lifecycleScope.launch {
@@ -2022,23 +2048,9 @@ class MeetingFragment : Fragment(), RealtimeObserver, AudioVideoObserver, VideoT
             meetingModel.cameraServiceConnection?.let { context?.unbindService(it) }
             meetingModel.isCameraServiceBound = false
         }
-    }
 
-    // Handle backgrounded app returning to active
-    override fun onStart() {
-        super.onStart()
-        audioVideo.startRemoteVideo()
-    }
-
-    // Handle app going into background
-    override fun onStop() {
-        super.onStop()
-
-        // Turn off screen share when screen locked
-        if (meetingModel.isSharingContent && !powerManager.isInteractive) {
-            audioVideo.stopContentShare()
-            screenShareManager?.stop(meetingModel.isScreenShareServiceBound)
-            meetingModel.isScreenShareServiceBound = false
+        screenLockReceiver?.let {
+            requireActivity().unregisterReceiver(it)
         }
     }
 
